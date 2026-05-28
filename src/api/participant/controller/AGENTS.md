@@ -12,6 +12,7 @@ This directory exposes the controller contract used by query hooks and runtime p
 
 - Define `ParticipantApiController`.
 - Implement session/auth, public survey, access check, duplicate check, asset URL, and submit use cases by orchestrating gateway and mapper modules.
+- Keep participant image upload behind the controller so views never call Storage directly.
 - Expose a React provider/hook only for controller access, not for business UI.
 - Normalize controller-level errors for pages and mutations.
 
@@ -27,6 +28,7 @@ getPublicSurvey(publicSlug: string): Promise<PublicSurvey>;
 checkAccess(publicSlug: string): Promise<SurveyAccessResult>;
 checkDuplicateSubmission(command: DuplicateSubmissionCommand): Promise<DuplicateSubmissionResult>;
 getAssetUrl(asset: SurveyAsset): Promise<string>;
+uploadQuestionImage(command: ParticipantQuestionImageUploadCommand): Promise<ParticipantQuestionImageUpload>;
 submitSurvey(command: SubmissionCommand): Promise<SubmissionResult>;
 ```
 

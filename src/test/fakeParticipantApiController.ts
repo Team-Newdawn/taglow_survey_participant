@@ -2,6 +2,8 @@ import type {
   DuplicateSubmissionCommand,
   DuplicateSubmissionResult,
   ParticipantApiController,
+  ParticipantQuestionImageUpload,
+  ParticipantQuestionImageUploadCommand,
   ParticipantSession,
   PublicSurvey,
   SignInCommand,
@@ -18,6 +20,8 @@ type FakeControllerOverrides = Partial<{
   surveyError: Error;
   duplicate: DuplicateSubmissionResult;
   submitResult: SubmissionResult;
+  uploadResult: ParticipantQuestionImageUpload;
+  uploadQuestionImage: ParticipantApiController['uploadQuestionImage'];
 }>;
 
 export function createFakeParticipantApiController(overrides: FakeControllerOverrides = {}): ParticipantApiController {
@@ -26,6 +30,17 @@ export function createFakeParticipantApiController(overrides: FakeControllerOver
   const surveyError = overrides.surveyError;
   const duplicate = overrides.duplicate ?? { alreadySubmitted: false };
   const submitResult = overrides.submitResult ?? { responseId: 'response-1', submittedAt: '2026-05-28T00:00:00.000Z' };
+  const uploadResult = overrides.uploadResult ?? {
+    storageBucket: 'survey-assets',
+    storagePath: 'participant-uploads/survey-1/user-1/question-upload/image.png',
+    signedUrl: 'https://example.com/uploaded.png',
+    metadata: {},
+  };
+  const uploadQuestionImage =
+    overrides.uploadQuestionImage ??
+    (async (_command: ParticipantQuestionImageUploadCommand) => {
+      return uploadResult;
+    });
 
   return {
     async getCurrentSession() {
@@ -61,6 +76,7 @@ export function createFakeParticipantApiController(overrides: FakeControllerOver
     async getAssetUrl(_asset: SurveyAsset) {
       return 'https://example.com/asset.jpg';
     },
+    uploadQuestionImage,
     async submitSurvey(_command: SubmissionCommand) {
       return submitResult;
     },

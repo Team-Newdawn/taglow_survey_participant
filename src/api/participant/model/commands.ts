@@ -19,3 +19,15 @@ export type AssetUrlCommand = Readonly<{
   asset: SurveyAsset;
 }>;
 
+export type ParticipantQuestionImageUploadCommand = Readonly<{
+  surveyId: string;
+  questionId: string;
+  file: File;
+}>;
+
+export type ParticipantQuestionImageUpload = Readonly<{
+  storageBucket: string;
+  storagePath: string;
+  signedUrl?: string;
+  metadata: Record<string, unknown>;
+}>;

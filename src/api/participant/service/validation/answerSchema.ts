@@ -63,6 +63,25 @@ export const imageTagAnswerSchema = z.object({
   textValue: z.string().trim().min(1),
 });
 
+export const participantImageTagAnswerSchema = z.object({
+  answerType: z.literal('participant_image_tag'),
+  tagPosition: tagPositionSchema,
+  tagType: z.string().min(1),
+  severity: z.number().int().optional(),
+  textValue: z.string().trim().optional(),
+  valueJson: z
+    .object({
+      participantImage: z
+        .object({
+          storageBucket: z.string().min(1),
+          storagePath: z.string().min(1),
+        })
+        .passthrough(),
+      tagIndex: z.number().int().min(1).optional(),
+    })
+    .passthrough(),
+});
+
 export const attentionCheckAnswerSchema = z.object({
   answerType: z.literal('attention_check'),
   choiceValue: z.string().optional(),
@@ -78,5 +97,6 @@ export const answerInputSchema = z.discriminatedUnion('answerType', [
   rankingAnswerSchema,
   textAnswerSchema,
   imageTagAnswerSchema,
+  participantImageTagAnswerSchema,
   attentionCheckAnswerSchema,
 ]);

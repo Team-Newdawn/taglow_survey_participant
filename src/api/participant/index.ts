@@ -5,6 +5,7 @@ export * from './model';
 export { participantQueryKeys } from './query/queryKeys';
 export { useAssetUrlQuery } from './query/useAssetUrlQuery';
 export { useDuplicateSubmissionQuery } from './query/useDuplicateSubmissionQuery';
+export { useParticipantQuestionImageUploadMutation } from './query/useParticipantQuestionImageUploadMutation';
 export { useParticipantSessionQuery } from './query/useParticipantSessionQuery';
 export { usePublicSurveyQuery } from './query/usePublicSurveyQuery';
 export { useSubmissionMutation } from './query/useSubmissionMutation';

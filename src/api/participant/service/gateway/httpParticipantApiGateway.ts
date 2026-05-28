@@ -5,6 +5,7 @@ import type {
   RawCreateAnswerPayload,
   RawCreateResponsePayload,
   RawDuplicateSubmissionResult,
+  RawParticipantQuestionImageUpload,
   RawPublicSurveyBundle,
   RawResponse,
   RawSession,
@@ -68,6 +69,10 @@ export class HttpParticipantApiGateway implements ParticipantApiGateway {
     return result.signedUrl;
   }
 
+  uploadQuestionImage(): Promise<RawParticipantQuestionImageUpload> {
+    throw new ParticipantApiError('UPLOAD_FAILED', 'HTTP participant image upload gateway is not implemented yet.');
+  }
+
   private async request<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await fetch(`${this.baseUrl}${path}`, {
       ...init,
@@ -84,4 +89,3 @@ export class HttpParticipantApiGateway implements ParticipantApiGateway {
     return response.json() as Promise<T>;
   }
 }
-

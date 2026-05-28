@@ -1,4 +1,13 @@
-import type { AnswerInput, ImageTagPoint, PublicQuestion, PublicSurvey, PublicSurveySection, RespondentProfile } from '../api/participant';
+import type {
+  AnswerInput,
+  ImageTagPoint,
+  ParticipantImageTagPoint,
+  ParticipantImageTagUpload,
+  PublicQuestion,
+  PublicSurvey,
+  PublicSurveySection,
+  RespondentProfile,
+} from '../api/participant';
 import { validateAttentionCheck } from '../api/participant/service/validation/attentionCheckValidator';
 import { normalizeProfileRecord, resolveProfileFieldKey } from './profileFields';
 
@@ -88,6 +97,34 @@ export function normalizeAnswerInput(question: PublicQuestion, value: unknown): 
         textValue: point.textValue,
       }));
     }
+    case 'participant_image_tag': {
+      const record = readRecord(value);
+      const image = readParticipantImageUpload(record.image);
+      const points = readParticipantImageTagPoints(record.points, isTagTextRequired(question));
+
+      if (!image) {
+        return [];
+      }
+
+      return points.map((point, index) => ({
+        ...base,
+        tagPosition: {
+          xRatio: point.xRatio,
+          yRatio: point.yRatio,
+        },
+        tagType: point.tagType,
+        severity: point.severity,
+        textValue: point.textValue,
+        valueJson: {
+          participantImage: {
+            storageBucket: image.storageBucket,
+            storagePath: image.storagePath,
+            ...(image.metadata ?? {}),
+          },
+          tagIndex: index + 1,
+        },
+      }));
+    }
     case 'attention_check': {
       const choiceValue = readString(value);
       const scoreValue = readNumber(value);
@@ -172,6 +209,13 @@ export function isAnsweredValue(question: PublicQuestion, value: unknown): boole
       return Boolean(readString(readRecord(value).textValue));
     case 'image_tag':
       return readImageTagPoints(readRecord(value).points).length > 0;
+    case 'participant_image_tag': {
+      const record = readRecord(value);
+      return (
+        Boolean(readParticipantImageUpload(record.image)) &&
+        readParticipantImageTagPoints(record.points, isTagTextRequired(question)).length > 0
+      );
+    }
     default:
       return false;
   }
@@ -258,6 +302,60 @@ function readImageTagPoints(value: unknown): ImageTagPoint[] {
 
       return severity === undefined ? [point] : [{ ...point, severity }];
     });
+}
+
+function readParticipantImageUpload(value: unknown): ParticipantImageTagUpload | undefined {
+  const record = readRecord(value);
+  const storageBucket = readString(record.storageBucket);
+  const storagePath = readString(record.storagePath);
+
+  if (!storageBucket || !storagePath) {
+    return undefined;
+  }
+
+  const signedUrl = readString(record.signedUrl);
+  const metadata = readRecord(record.metadata);
+
+  return {
+    storageBucket,
+    storagePath,
+    ...(signedUrl ? { signedUrl } : {}),
+    metadata,
+  };
+}
+
+function readParticipantImageTagPoints(value: unknown, requireText: boolean): ParticipantImageTagPoint[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((item) => {
+    const record = readRecord(item);
+    const id = readString(record.id);
+    const xRatio = readNumber(record.xRatio);
+    const yRatio = readNumber(record.yRatio);
+    const tagType = readString(record.tagType);
+    const textValue = readString(record.textValue);
+
+    if (typeof xRatio !== 'number' || typeof yRatio !== 'number' || !tagType || (requireText && !textValue)) {
+      return [];
+    }
+
+    const severity = readNumber(record.severity);
+    const point: ParticipantImageTagPoint = {
+      ...(id ? { id } : {}),
+      xRatio,
+      yRatio,
+      tagType,
+      ...(textValue ? { textValue } : {}),
+    };
+
+    return severity === undefined ? [point] : [{ ...point, severity }];
+  });
+}
+
+function isTagTextRequired(question: PublicQuestion): boolean {
+  return question.validation.requiredTagText === true || question.config.requireText === true;
 }
 
 function pickDefined(record: Record<string, unknown>): Record<string, unknown> {

@@ -3,6 +3,7 @@ import { AttentionCheckQuestion } from './AttentionCheckQuestion';
 import { ExperienceQuestion } from './ExperienceQuestion';
 import { ImageTagQuestion } from './ImageTagQuestion';
 import { MultiSelectQuestion } from './MultiSelectQuestion';
+import { ParticipantImageTagQuestion } from './ParticipantImageTagQuestion';
 import { ProfileQuestion } from './ProfileQuestion';
 import { RankingQuestion } from './RankingQuestion';
 import { ScaleQuestion } from './ScaleQuestion';
@@ -37,6 +38,8 @@ export function QuestionRenderer(props: QuestionRendererProps) {
       return <TextQuestion {...props} />;
     case 'image_tag':
       return <ImageTagQuestion {...props} />;
+    case 'participant_image_tag':
+      return <ParticipantImageTagQuestion {...props} />;
     case 'attention_check':
       return <AttentionCheckQuestion {...props} />;
     default:

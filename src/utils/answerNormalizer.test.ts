@@ -92,4 +92,72 @@ describe('buildSubmissionAnswers', () => {
       ]),
     );
   });
+
+  it('normalizes participant uploaded image tags into point answers with upload metadata', () => {
+    const participantImageSurvey = {
+      ...publishedSurveyFixture,
+      sections: [
+        {
+          ...publishedSurveyFixture.sections[1],
+          questions: [
+            {
+              ...publishedSurveyFixture.sections[1].questions[0],
+              id: 'question-upload-tag',
+              questionKey: 'upload_tag_suggestion',
+              questionType: 'participant_image_tag' as const,
+              metricType: 'none' as const,
+              config: { tagTypes: ['수리 요청', '개선 제안'] },
+              validation: {},
+            },
+          ],
+        },
+      ],
+    };
+
+    const answers = buildSubmissionAnswers(participantImageSurvey, {
+      'question-upload-tag': {
+        image: {
+          storageBucket: 'survey-assets',
+          storagePath: 'participant-uploads/survey-1/user-1/question-upload-tag/image.png',
+          signedUrl: 'https://example.com/uploaded.png',
+          metadata: {
+            originalName: 'image.png',
+            contentType: 'image/png',
+            size: 1234,
+          },
+        },
+        points: [
+          {
+            id: 'pin-1',
+            xRatio: 0.42,
+            yRatio: 0.66,
+            tagType: '수리 요청',
+            textValue: '문이 잘 닫히지 않습니다.',
+          },
+        ],
+      },
+    });
+
+    expect(answers).toEqual([
+      expect.objectContaining({
+        surveyId: 'survey-1',
+        sectionId: 'section-facility',
+        questionId: 'question-upload-tag',
+        answerType: 'participant_image_tag',
+        tagPosition: { xRatio: 0.42, yRatio: 0.66 },
+        tagType: '수리 요청',
+        textValue: '문이 잘 닫히지 않습니다.',
+        valueJson: {
+          participantImage: {
+            storageBucket: 'survey-assets',
+            storagePath: 'participant-uploads/survey-1/user-1/question-upload-tag/image.png',
+            originalName: 'image.png',
+            contentType: 'image/png',
+            size: 1234,
+          },
+          tagIndex: 1,
+        },
+      }),
+    ]);
+  });
 });

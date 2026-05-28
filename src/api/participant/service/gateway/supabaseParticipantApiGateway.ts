@@ -8,6 +8,7 @@ import type {
   RawCreateAnswerPayload,
   RawCreateResponsePayload,
   RawDuplicateSubmissionResult,
+  RawParticipantQuestionImageUpload,
   RawPublicSurveyBundle,
   RawQuestionRow,
   RawResponse,
@@ -24,7 +25,10 @@ type RawEmbeddedSurveyRow = RawSurveyRow &
   }>;
 
 export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
-  constructor(private readonly supabase: SupabaseClient) {}
+  constructor(
+    private readonly supabase: SupabaseClient,
+    private readonly participantUploadBucket = 'survey-assets',
+  ) {}
 
   async getSession(): Promise<RawSession | null> {
     const { data, error } = await this.supabase.auth.getSession();
@@ -203,6 +207,59 @@ export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
 
     return data.signedUrl;
   }
+
+  async uploadQuestionImage(command: {
+    surveyId: string;
+    questionId: string;
+    file: File;
+  }): Promise<RawParticipantQuestionImageUpload> {
+    if (!command.file.type.startsWith('image/')) {
+      throw new ParticipantApiError('UPLOAD_FAILED', 'Only image files can be uploaded.');
+    }
+
+    const { data: userData, error: userError } = await this.supabase.auth.getUser();
+    if (userError) {
+      throw toParticipantApiError(userError, 'UNAUTHENTICATED');
+    }
+
+    const user = userData.user;
+    if (!user) {
+      throw new ParticipantApiError('UNAUTHENTICATED', 'Login is required to upload an image.');
+    }
+
+    const uploadId = crypto.randomUUID();
+    const storagePath = `participant-uploads/${command.surveyId}/${user.id}/${command.questionId}/${uploadId}${getFileExtension(
+      command.file.name,
+    )}`;
+    const { error: uploadError } = await this.supabase.storage.from(this.participantUploadBucket).upload(storagePath, command.file, {
+      cacheControl: '3600',
+      contentType: command.file.type || undefined,
+      upsert: false,
+    });
+
+    if (uploadError) {
+      throw toParticipantApiError(uploadError, 'UPLOAD_FAILED');
+    }
+
+    const { data: signedUrlData, error: signedUrlError } = await this.supabase.storage
+      .from(this.participantUploadBucket)
+      .createSignedUrl(storagePath, 60 * 60);
+
+    if (signedUrlError || !signedUrlData?.signedUrl) {
+      throw toParticipantApiError(signedUrlError, 'UPLOAD_FAILED');
+    }
+
+    return {
+      storage_bucket: this.participantUploadBucket,
+      storage_path: storagePath,
+      signed_url: signedUrlData.signedUrl,
+      metadata: {
+        originalName: command.file.name,
+        contentType: command.file.type,
+        size: command.file.size,
+      },
+    };
+  }
 }
 
 export function createSupabaseParticipantApiGateway(args: {
@@ -218,4 +275,9 @@ export function createSupabaseParticipantApiGateway(args: {
       },
     }),
   );
+}
+
+function getFileExtension(fileName: string): string {
+  const dotIndex = fileName.lastIndexOf('.');
+  return dotIndex >= 0 ? fileName.slice(dotIndex).toLowerCase() : '';
 }

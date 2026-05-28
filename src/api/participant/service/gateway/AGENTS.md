@@ -17,6 +17,7 @@ This directory owns external IO for participant APIs.
 - Check duplicate submission status.
 - Create one `responses` row and many `answers` rows. Call optional `submitSurveyResponse` only when the DB/server actually exposes it.
 - Create signed asset URLs for private storage assets.
+- Upload participant-provided question images through Storage under policy-compatible paths.
 - Normalize Supabase/HTTP failures into routeable participant API errors.
 
 ## Gateway Contract
@@ -33,6 +34,7 @@ createResponse(payload): Promise<RawResponse>;
 createAnswers(payloads): Promise<RawAnswer[]>;
 submitSurveyResponse?(payload): Promise<RawSubmitSurveyResult>;
 createSignedAssetUrl(args): Promise<string>;
+uploadQuestionImage(command): Promise<RawParticipantQuestionImageUpload>;
 ```
 
 ## Rules

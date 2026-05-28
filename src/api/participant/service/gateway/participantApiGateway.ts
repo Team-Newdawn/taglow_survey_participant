@@ -109,6 +109,13 @@ export type RawSubmitSurveyResult = Readonly<{
   submittedAt?: string;
 }>;
 
+export type RawParticipantQuestionImageUpload = Readonly<{
+  storage_bucket: string;
+  storage_path: string;
+  signed_url?: string;
+  metadata: RawJson;
+}>;
+
 export interface ParticipantApiGateway {
   getSession(): Promise<RawSession | null>;
   signInWithGoogle(redirectTo: string): Promise<void>;
@@ -125,4 +132,9 @@ export interface ParticipantApiGateway {
     bucket: string;
     path: string;
   }): Promise<string>;
+  uploadQuestionImage(command: {
+    surveyId: string;
+    questionId: string;
+    file: File;
+  }): Promise<RawParticipantQuestionImageUpload>;
 }

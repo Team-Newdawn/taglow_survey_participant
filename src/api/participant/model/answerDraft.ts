@@ -11,6 +11,27 @@ export type ImageTagPoint = Readonly<{
   textValue: string;
 }>;
 
+export type ParticipantImageTagUpload = Readonly<{
+  storageBucket: string;
+  storagePath: string;
+  signedUrl?: string;
+  metadata?: Record<string, unknown>;
+}>;
+
+export type ParticipantImageTagPoint = Readonly<{
+  id?: string;
+  xRatio: number;
+  yRatio: number;
+  tagType: string;
+  severity?: number;
+  textValue?: string;
+}>;
+
+export type ParticipantImageTagValue = Readonly<{
+  image?: ParticipantImageTagUpload;
+  points?: ParticipantImageTagPoint[];
+}>;
+
 export type AnswerDraft = Readonly<{
   questionId: string;
   answerType: AnswerType;
@@ -42,4 +63,3 @@ export type AnswerInput = Readonly<{
   severity?: number;
   valueJson?: Record<string, unknown>;
 }>;
-

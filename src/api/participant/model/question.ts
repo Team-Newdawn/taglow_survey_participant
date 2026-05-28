@@ -9,6 +9,7 @@ export type QuestionType =
   | 'ranking'
   | 'text'
   | 'image_tag'
+  | 'participant_image_tag'
   | 'attention_check';
 
 export type MetricType = 'none' | 'satisfaction' | 'importance' | 'experience';

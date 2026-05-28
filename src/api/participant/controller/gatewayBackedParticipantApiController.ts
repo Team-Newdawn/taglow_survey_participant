@@ -1,7 +1,13 @@
 import { isAllowedParticipantEmail } from '../../../utils/authDomain';
 import type { SurveyAsset } from '../model/asset';
 import type { ParticipantSession, SurveyAccessResult } from '../model/auth';
-import type { DuplicateSubmissionCommand, DuplicateSubmissionResult, SignInCommand } from '../model/commands';
+import type {
+  DuplicateSubmissionCommand,
+  DuplicateSubmissionResult,
+  ParticipantQuestionImageUpload,
+  ParticipantQuestionImageUploadCommand,
+  SignInCommand,
+} from '../model/commands';
 import type { PublicSurvey } from '../model/publicSurvey';
 import type { SubmissionCommand, SubmissionResult } from '../model/submission';
 import { ParticipantApiError, isParticipantApiError, toParticipantApiError } from '../service/gateway/apiErrors';
@@ -101,6 +107,16 @@ export class GatewayBackedParticipantApiController implements ParticipantApiCont
       bucket: asset.storageBucket,
       path: asset.storagePath,
     });
+  }
+
+  async uploadQuestionImage(command: ParticipantQuestionImageUploadCommand): Promise<ParticipantQuestionImageUpload> {
+    const uploaded = await this.gateway.uploadQuestionImage(command);
+    return {
+      storageBucket: uploaded.storage_bucket,
+      storagePath: uploaded.storage_path,
+      signedUrl: uploaded.signed_url,
+      metadata: uploaded.metadata,
+    };
   }
 
   async submitSurvey(command: SubmissionCommand): Promise<SubmissionResult> {

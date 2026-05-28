@@ -7,6 +7,7 @@ export type ParticipantApiErrorCode =
   | 'VALIDATION_FAILED'
   | 'SUBMISSION_FAILED'
   | 'ASSET_LOAD_FAILED'
+  | 'UPLOAD_FAILED'
   | 'DRAFT_RESTORE_FAILED'
   | 'UNKNOWN';
 
@@ -70,4 +71,3 @@ function readErrorMessage(error: unknown): string | undefined {
   const message = (error as { message?: unknown }).message;
   return typeof message === 'string' ? message : undefined;
 }
-

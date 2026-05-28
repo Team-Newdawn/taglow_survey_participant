@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import type { PublicQuestion } from '../../../api/participant';
 import { useParticipantSessionQuery, usePublicSurveyQuery } from '../../../api/participant';
 import type { SurveyDraft } from '../../../api/participant/service/draft/draftStorage';
 import { LocalStorageDraftStorage } from '../../../api/participant/service/draft/localStorageDraftStorage';
@@ -41,6 +42,7 @@ export function SurveySectionPage() {
   const { setCurrentSectionKey, markSectionCompleted } = useParticipantProgressStore();
   const [missingQuestionIds, setMissingQuestionIds] = useState<string[]>([]);
   const [restoreDraft, setRestoreDraft] = useState<SurveyDraft | null>(null);
+  const [questionScreenIndex, setQuestionScreenIndex] = useState(0);
   const storage = useMemo(() => new LocalStorageDraftStorage(), []);
   const form = useForm<Record<string, unknown>>({ defaultValues: values });
 
@@ -74,6 +76,11 @@ export function SurveySectionPage() {
   useEffect(() => {
     setCurrentSectionKey(section?.sectionKey);
   }, [section?.sectionKey, setCurrentSectionKey]);
+
+  useEffect(() => {
+    setQuestionScreenIndex(0);
+    setMissingQuestionIds([]);
+  }, [section?.id]);
 
   useEffect(() => {
     const subscription = form.watch((nextValues, info) => {
@@ -133,9 +140,14 @@ export function SurveySectionPage() {
   }
 
   const visibleQuestions = section.questions.filter((question) => shouldShowQuestion({ question, values }));
+  const questionScreens = buildQuestionScreens(visibleQuestions);
+  const activeQuestionScreenIndex = Math.min(questionScreenIndex, Math.max(questionScreens.length - 1, 0));
+  const currentQuestionScreen = questionScreens[activeQuestionScreenIndex] ?? [];
+  const hasPreviousQuestionScreen = activeQuestionScreenIndex > 0;
+  const hasNextQuestionScreen = activeQuestionScreenIndex < questionScreens.length - 1;
   const answeredCount = visibleQuestions.filter((question) => isAnsweredValue(question, form.watch(question.id))).length;
   const missingQuestions = findMissingRequiredQuestions(section, form.getValues()).filter((question) =>
-    visibleQuestions.some((visibleQuestion) => visibleQuestion.id === question.id),
+    currentQuestionScreen.some((visibleQuestion) => visibleQuestion.id === question.id),
   );
 
   const restoreCurrentDraft = () => {
@@ -168,12 +180,26 @@ export function SurveySectionPage() {
     }
 
     setMissingQuestionIds([]);
+
+    if (hasNextQuestionScreen) {
+      await saveDraft();
+      setQuestionScreenIndex(activeQuestionScreenIndex + 1);
+      return;
+    }
+
     markSectionCompleted(section.id);
     await saveDraft();
     navigate(nextSection ? `/survey/${publicSlug}/sections/${nextSection.sectionKey}` : `/survey/${publicSlug}/review`);
   };
 
   const goPrevious = async () => {
+    if (hasPreviousQuestionScreen) {
+      setMissingQuestionIds([]);
+      await saveDraft();
+      setQuestionScreenIndex(activeQuestionScreenIndex - 1);
+      return;
+    }
+
     await saveDraft();
     navigate(previousSection ? `/survey/${publicSlug}/sections/${previousSection.sectionKey}` : `/survey/${publicSlug}/intro`);
   };
@@ -199,7 +225,7 @@ export function SurveySectionPage() {
       ) : null}
 
       <form className="survey-section-page__questions">
-        {visibleQuestions.map((question) => (
+        {currentQuestionScreen.map((question) => (
           <QuestionRenderer
             key={question.id}
             question={question}
@@ -220,9 +246,33 @@ export function SurveySectionPage() {
           이전
         </Button>
         <Button type="button" onClick={goNext}>
-          {nextSection ? '다음' : '검토하기'}
+          {hasNextQuestionScreen || nextSection ? '다음' : '검토하기'}
         </Button>
       </nav>
     </main>
   );
+}
+
+function buildQuestionScreens(questions: PublicQuestion[]): PublicQuestion[][] {
+  return questions.reduce<PublicQuestion[][]>((screens, question) => {
+    if (isImageTagQuestion(question)) {
+      screens.push([question]);
+      return screens;
+    }
+
+    const previousScreen = screens.at(-1);
+    const shouldAppendToPrevious = previousScreen && previousScreen.every((item) => !isImageTagQuestion(item));
+
+    if (shouldAppendToPrevious) {
+      previousScreen.push(question);
+      return screens;
+    }
+
+    screens.push([question]);
+    return screens;
+  }, []);
+}
+
+function isImageTagQuestion(question: PublicQuestion): boolean {
+  return question.questionType === 'image_tag' || question.questionType === 'participant_image_tag';
 }
