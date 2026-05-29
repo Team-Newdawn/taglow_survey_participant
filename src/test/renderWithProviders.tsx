@@ -20,7 +20,7 @@ export function renderWithProviders(ui: ReactElement, options: RenderOptions = {
   return render(
     <QueryClientProvider client={queryClient}>
       <ParticipantApiControllerProvider value={controller}>
-        <MemoryRouter initialEntries={[options.route ?? '/survey/demo']}>{ui}</MemoryRouter>
+        <MemoryRouter initialEntries={[options.route ?? '/survey/fixture-survey']}>{ui}</MemoryRouter>
       </ParticipantApiControllerProvider>
     </QueryClientProvider>,
   );
