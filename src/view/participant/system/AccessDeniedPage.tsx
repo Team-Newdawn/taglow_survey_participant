@@ -9,8 +9,8 @@ export function AccessDeniedPage() {
   return (
     <SystemStatePage
       eyebrow="접근 제한"
-      title="학교 Google 계정으로 다시 로그인해주세요."
-      description="이 설문은 한동대학교 계정(@handong.ac.kr)으로만 참여할 수 있습니다."
+      title="이 설문에 접근할 수 없습니다."
+      description="로그인 상태를 확인한 뒤 다시 시도해주세요."
       actionHref={`/survey/${publicSlug}/login`}
       actionLabel="다시 로그인하기"
     />

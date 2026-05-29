@@ -228,12 +228,23 @@ export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
     }
 
     const uploadId = crypto.randomUUID();
-    const storagePath = `participant-uploads/${command.surveyId}/${user.id}/${command.questionId}/${uploadId}${getFileExtension(
-      command.file.name,
-    )}`;
+    const storagePath = buildParticipantUploadStoragePath({ uploadId, fileName: command.file.name });
+    const uploadMetadata = {
+      surveyId: command.surveyId,
+      questionId: command.questionId,
+      originalName: command.file.name,
+      contentType: command.file.type,
+      size: command.file.size,
+    };
+    const answerMetadata = {
+      originalName: command.file.name,
+      contentType: command.file.type,
+      size: command.file.size,
+    };
     const { error: uploadError } = await this.supabase.storage.from(this.participantUploadBucket).upload(storagePath, command.file, {
       cacheControl: '3600',
       contentType: command.file.type || undefined,
+      metadata: uploadMetadata,
       upsert: false,
     });
 
@@ -253,11 +264,7 @@ export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
       storage_bucket: this.participantUploadBucket,
       storage_path: storagePath,
       signed_url: signedUrlData.signedUrl,
-      metadata: {
-        originalName: command.file.name,
-        contentType: command.file.type,
-        size: command.file.size,
-      },
+      metadata: answerMetadata,
     };
   }
 }
@@ -277,7 +284,14 @@ export function createSupabaseParticipantApiGateway(args: {
   );
 }
 
+export function buildParticipantUploadStoragePath(args: { uploadId: string; fileName: string }): string {
+  return `participant-uploads/${args.uploadId}${getFileExtension(args.fileName)}`;
+}
+
 function getFileExtension(fileName: string): string {
-  const dotIndex = fileName.lastIndexOf('.');
-  return dotIndex >= 0 ? fileName.slice(dotIndex).toLowerCase() : '';
+  const baseName = fileName.split(/[\\/]/).at(-1) ?? '';
+  const dotIndex = baseName.lastIndexOf('.');
+  const extension = dotIndex >= 0 ? baseName.slice(dotIndex + 1).toLowerCase() : '';
+
+  return /^[a-z0-9]+$/.test(extension) ? `.${extension}` : '';
 }

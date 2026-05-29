@@ -4,7 +4,6 @@ import { useParticipantSessionQuery, usePublicSurveyQuery } from '../../../api/p
 import { ButtonLink } from '../../../components/Button';
 import { Message } from '../../../components/Message';
 import { useParticipantLocaleStore } from '../../../store/participantLocaleStore';
-import { isAllowedParticipantEmail } from '../../../utils/authDomain';
 import { readLocalizedText, resolveSurveyDefaultLocale } from '../../../utils/i18nText';
 import './css/SurveyEntryPage.css';
 
@@ -13,10 +12,6 @@ export function SurveyEntryPage() {
   const surveyQuery = usePublicSurveyQuery(publicSlug);
   const sessionQuery = useParticipantSessionQuery();
   const { locale, setLocale } = useParticipantLocaleStore();
-
-  if (sessionQuery.data && !isAllowedParticipantEmail(sessionQuery.data.email)) {
-    return <Navigate to={`/survey/${publicSlug}/access-denied`} replace />;
-  }
 
   if (surveyQuery.isPending || sessionQuery.isPending) {
     return <EntryShell title="설문을 불러오고 있습니다." description="잠시만 기다려주세요." />;
@@ -28,12 +23,12 @@ export function SurveyEntryPage() {
         <main className="survey-entry-page">
           <section className="survey-entry-page__hero">
             <p className="survey-entry-page__eyebrow">Taglow Survey</p>
-            <h1>학교 Google 계정으로 설문을 확인해주세요.</h1>
+            <h1>Google 계정으로 설문을 확인해주세요.</h1>
             <p>로그인 후 참여 가능한 설문인지 확인할 수 있습니다.</p>
           </section>
           <section className="survey-entry-page__panel">
-            <Message tone="info" title="@handong.ac.kr 계정이 필요합니다.">
-              <p>학교 Google 계정으로 로그인하면 원래 설문으로 돌아옵니다.</p>
+            <Message tone="info" title="Google 로그인이 필요합니다.">
+              <p>Google 계정으로 로그인하면 원래 설문으로 돌아옵니다.</p>
             </Message>
             <ButtonLink fullWidth href={`/survey/${publicSlug}/login`}>
               Google 로그인으로 계속하기
@@ -76,8 +71,8 @@ export function SurveyEntryPage() {
           </button>
         </div>
 
-        <Message tone="info" title="학교 Google 계정으로 참여해주세요.">
-          <p>이 설문은 한동대학교 계정(@handong.ac.kr)으로만 제출할 수 있습니다.</p>
+        <Message tone="info" title="Google 계정으로 참여해주세요.">
+          <p>로그인 후 설문을 시작할 수 있습니다.</p>
         </Message>
 
         <ul className="survey-entry-page__facts">

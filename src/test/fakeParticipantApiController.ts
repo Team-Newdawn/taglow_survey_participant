@@ -25,14 +25,14 @@ type FakeControllerOverrides = Partial<{
 }>;
 
 export function createFakeParticipantApiController(overrides: FakeControllerOverrides = {}): ParticipantApiController {
-  const session = Object.hasOwn(overrides, 'session') ? overrides.session ?? null : { userId: 'user-1', email: 'student@handong.ac.kr' };
+  const session = Object.hasOwn(overrides, 'session') ? overrides.session ?? null : { userId: 'user-1', email: 'student@example.com' };
   const survey = overrides.survey ?? publishedSurveyFixture;
   const surveyError = overrides.surveyError;
   const duplicate = overrides.duplicate ?? { alreadySubmitted: false };
   const submitResult = overrides.submitResult ?? { responseId: 'response-1', submittedAt: '2026-05-28T00:00:00.000Z' };
   const uploadResult = overrides.uploadResult ?? {
     storageBucket: 'survey-assets',
-    storagePath: 'participant-uploads/survey-1/user-1/question-upload/image.png',
+    storagePath: 'participant-uploads/upload-1.png',
     signedUrl: 'https://example.com/uploaded.png',
     metadata: {},
   };

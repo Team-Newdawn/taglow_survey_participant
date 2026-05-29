@@ -1,6 +1,5 @@
 export type ParticipantApiErrorCode =
   | 'UNAUTHENTICATED'
-  | 'NOT_HANDONG_EMAIL'
   | 'SURVEY_NOT_FOUND'
   | 'SURVEY_CLOSED'
   | 'ALREADY_SUBMITTED'
@@ -41,10 +40,6 @@ export function toParticipantApiError(error: unknown, fallbackCode: ParticipantA
 
   if (code === 'PGRST116') {
     return new ParticipantApiError('SURVEY_NOT_FOUND', 'Survey was not found.', error);
-  }
-
-  if (code === '42501') {
-    return new ParticipantApiError('NOT_HANDONG_EMAIL', 'The current user is not allowed to access this survey.', error);
   }
 
   return new ParticipantApiError(fallbackCode, message, error);
