@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { publishedSurveyFixture } from '../../test/fixtures/publicSurveyFixture';
-import { buildSubmissionAnswers, extractRespondentProfile } from '../answerNormalizer';
+import { buildSubmissionAnswers, extractRespondentProfile, findMissingRequiredQuestions } from '../answerNormalizer';
 
 describe('buildSubmissionAnswers', () => {
   it('normalizes scale and multi-select form values into submission answers', () => {
@@ -40,6 +40,25 @@ describe('buildSubmissionAnswers', () => {
         }),
       ]),
     );
+  });
+
+  it('drops stale low-score details when a scale score is above the low-score threshold', () => {
+    const answers = buildSubmissionAnswers(publishedSurveyFixture, {
+      'question-scale': {
+        scoreValue: 3,
+        lowScoreReason: 'low_quality',
+        lowScoreText: '이전 낮은 점수 이유입니다.',
+      },
+    });
+
+    expect(answers).toEqual([
+      expect.objectContaining({
+        questionId: 'question-scale',
+        answerType: 'scale',
+        scoreValue: 3,
+        valueJson: {},
+      }),
+    ]);
   });
 
   it('aggregates individual profile question answers into respondent profile columns', () => {
@@ -157,6 +176,95 @@ describe('buildSubmissionAnswers', () => {
           },
           tagIndex: 1,
         },
+      }),
+    ]);
+  });
+
+  it('treats grouped required multi-select questions as one required answer', () => {
+    const section = {
+      ...publishedSurveyFixture.sections[1],
+      questions: [
+        {
+          ...publishedSurveyFixture.sections[1].questions[1],
+          id: 'time-1',
+          questionKey: 'time_1',
+          isRequired: true,
+          config: {
+            displayGroup: '주로 사용하는 시간대',
+            minSelect: 0,
+            options: [{ value: '05_00_07_00', label: { ko: '05:00~07:00' } }],
+          },
+        },
+        {
+          ...publishedSurveyFixture.sections[1].questions[1],
+          id: 'time-2',
+          questionKey: 'time_2',
+          isRequired: true,
+          config: {
+            displayGroup: '주로 사용하는 시간대',
+            minSelect: 0,
+            options: [{ value: '07_00_09_00', label: { ko: '07:00~09:00' } }],
+          },
+        },
+      ],
+    };
+
+    expect(findMissingRequiredQuestions(section, {})).toEqual([section.questions[0]]);
+    expect(
+      findMissingRequiredQuestions(section, {
+        'time-2': { selectedOptions: ['07_00_09_00'] },
+      }),
+    ).toEqual([]);
+  });
+
+  it('requires an opinion type only for selection-before-text questions', () => {
+    const section = {
+      ...publishedSurveyFixture.sections[1],
+      questions: [
+        {
+          ...publishedSurveyFixture.sections[1].questions[1],
+          id: 'plain-text',
+          questionKey: 'plain_text',
+          questionType: 'text' as const,
+          isRequired: true,
+          config: { maxLength: 1000 },
+        },
+        {
+          ...publishedSurveyFixture.sections[1].questions[1],
+          id: 'select-text',
+          questionKey: 'select_text',
+          questionType: 'text' as const,
+          isRequired: true,
+          config: {
+            options: [
+              { value: 'discomfort', label: { ko: '불편' } },
+              { value: 'praise', label: { ko: '칭찬' } },
+            ],
+          },
+        },
+      ],
+    };
+
+    expect(
+      findMissingRequiredQuestions(section, {
+        'plain-text': { textValue: '좋았습니다.' },
+        'select-text': { textValue: '좋았습니다.' },
+      }),
+    ).toEqual([section.questions[1]]);
+
+    expect(
+      buildSubmissionAnswers(
+        { ...publishedSurveyFixture, sections: [section] },
+        {
+          'select-text': { opinionType: 'praise', textValue: '좋았습니다.' },
+        },
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        questionId: 'select-text',
+        answerType: 'text',
+        textValue: '좋았습니다.',
+        valueJson: { opinion_type: 'praise' },
       }),
     ]);
   });

@@ -1,14 +1,33 @@
 .survey-section-page {
-  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
   max-width: var(--layout-content-max);
   margin: 0 auto;
-  padding: var(--space-6) var(--space-5) calc(var(--layout-bottom-action-height) + var(--space-10));
+  overflow: hidden;
+  padding: var(--space-6) var(--space-5) 0;
+}
+
+.survey-section-page > .ui-step-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-bg);
+  padding-bottom: var(--space-4);
+}
+
+.survey-section-page__body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-2) 0 calc(var(--layout-bottom-action-height) + var(--space-10));
+  scrollbar-gutter: stable;
 }
 
 .survey-section-page__questions {
   display: grid;
   gap: var(--space-5);
-  margin-top: var(--space-6);
+  margin-top: var(--space-5);
 }
 
 .survey-section-page__bottom {

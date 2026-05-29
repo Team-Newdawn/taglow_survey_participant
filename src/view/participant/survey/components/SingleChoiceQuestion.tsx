@@ -8,17 +8,22 @@ export function SingleChoiceQuestion(props: QuestionComponentProps<unknown>) {
   const options = getDisplayOptions(props.question, props.locale, props.fallbackLocale);
 
   return (
-    <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error}>
-      <div className="single-choice-question">
+    <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
+      <div className="single-choice-question" role="radiogroup" aria-labelledby={`${props.question.id}-title`}>
         {options.map((option) => (
-          <button
+          <label
             key={option.value}
-            type="button"
-            className={value === option.value ? 'is-selected' : ''}
-            onClick={() => props.onChange(option.value)}
+            className={`single-choice-question__option${value === option.value ? ' is-selected' : ''}`}
           >
-            {option.label}
-          </button>
+            <input
+              type="radio"
+              name={props.question.id}
+              value={option.value}
+              checked={value === option.value}
+              onChange={() => props.onChange(option.value)}
+            />
+            <span>{option.label}</span>
+          </label>
         ))}
       </div>
     </QuestionShell>

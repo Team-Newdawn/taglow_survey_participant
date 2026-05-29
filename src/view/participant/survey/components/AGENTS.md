@@ -12,6 +12,8 @@ This directory contains participant survey feature components.
 - `ProfileQuestion.css`
 - `ScaleQuestion.tsx`
 - `ScaleQuestion.css`
+- `ScaleQuestionGroup.tsx`
+- `ScaleQuestionGroup.css`
 - `SingleChoiceQuestion.tsx`
 - `SingleChoiceQuestion.css`
 - `MultiSelectQuestion.tsx`
@@ -37,6 +39,7 @@ This directory contains participant survey feature components.
 - Use plain participant wording for image/floorplan location selection.
 - Display low-score follow-up only when validation/branch logic says it is relevant.
 - `QuestionRenderer` supports v2 types: profile, scale, single_choice, multi_select, ranking, text, image_tag, participant_image_tag, attention_check.
+- Repeated scale questions with the same `config.displayGroup` are grouped by the section page and rendered through `ScaleQuestionGroup` without changing their per-question draft or submit shape.
 
 ## CSS Ownership
 

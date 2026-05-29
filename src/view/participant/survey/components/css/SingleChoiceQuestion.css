@@ -1,1 +1,46 @@
-@import "./ExperienceQuestion.css";
+.single-choice-question {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.single-choice-question__option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 48px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text);
+  cursor: pointer;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+.single-choice-question__option.is-selected {
+  border-color: var(--color-brand-600);
+  background: var(--color-brand-100);
+  color: var(--color-brand-700);
+  font-weight: var(--font-weight-bold);
+}
+
+.single-choice-question__option input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--color-brand-600);
+}
+
+.single-choice-question__option:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+.single-choice-question__option span {
+  min-width: 0;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+}

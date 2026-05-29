@@ -7,5 +7,6 @@ export type QuestionComponentProps<TValue = unknown> = {
   fallbackLocale: Locale;
   value: TValue;
   error?: string;
+  number?: number;
   onChange: (value: TValue) => void;
 };

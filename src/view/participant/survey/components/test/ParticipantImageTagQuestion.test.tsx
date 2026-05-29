@@ -34,7 +34,7 @@ describe('ParticipantImageTagQuestion', () => {
       metadata: { originalName: 'upload.png' },
     }));
 
-    renderWithProviders(<Harness question={question} />, {
+    const { container } = renderWithProviders(<Harness question={question} />, {
       controller: createFakeParticipantApiController({ uploadQuestionImage }),
     });
 
@@ -47,15 +47,20 @@ describe('ParticipantImageTagQuestion', () => {
 
     const image = await screen.findByRole('img', { name: '참여자가 올린 위치 선택 사진' });
     mockImageRect(image);
-    dragNewPointToImage(25, 25);
+    expect(container.querySelector('.image-tag-question__sticker-hint')).toBeInTheDocument();
+
+    dragNewPointToImage(50, 25);
 
     expect(await screen.findByRole('dialog', { name: '위치 내용 입력' })).toBeInTheDocument();
+    expect(container.querySelector('.image-tag-question__sticker-hint')).not.toBeInTheDocument();
     expect(screen.getByLabelText('카테고리')).toHaveValue('수리 요청');
 
     await user.type(screen.getByLabelText('이유'), '문이 잘 닫히지 않습니다.');
     await user.click(screen.getByRole('button', { name: '저장' }));
 
-    expect(await screen.findByRole('button', { name: '1번 위치 수정' })).toBeInTheDocument();
+    const pin = await screen.findByRole('button', { name: '1번 위치 수정' });
+    expect(pin).toHaveStyle({ left: '50%', top: '25%' });
+    expect(container.querySelector('.image-tag-question__sticker-hint')).not.toBeInTheDocument();
   });
 });
 
@@ -75,7 +80,7 @@ function Harness(props: { question: PublicQuestion }) {
 }
 
 function dragNewPointToImage(clientX: number, clientY: number) {
-  const dot = screen.getByRole('button', { name: '새 위치 점을 이미지로 드래그' });
+  const dot = screen.getByRole('button', { name: '새 위치 스티커를 이미지로 드래그' });
   fireEvent.pointerDown(dot, { pointerId: 1, clientX: 0, clientY: 120 });
   fireEvent.pointerUp(dot, { pointerId: 1, clientX, clientY });
 }

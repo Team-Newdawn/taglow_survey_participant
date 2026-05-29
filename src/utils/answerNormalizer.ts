@@ -33,14 +33,19 @@ export function normalizeAnswerInput(question: PublicQuestion, value: unknown): 
       return [{ ...base, valueJson: readRecord(value) }];
     case 'scale': {
       const record = readRecord(value);
+      const scoreValue = readNumber(record.scoreValue);
+      const lowScoreThreshold = readLowScoreThreshold(question);
       return [
         {
           ...base,
-          scoreValue: readNumber(record.scoreValue),
-          valueJson: pickDefined({
-            low_score_reason: readString(record.lowScoreReason),
-            low_score_text: readString(record.lowScoreText),
-          }),
+          scoreValue,
+          valueJson:
+            typeof scoreValue === 'number' && scoreValue <= lowScoreThreshold
+              ? pickDefined({
+                  low_score_reason: readString(record.lowScoreReason),
+                  low_score_text: readString(record.lowScoreText),
+                })
+              : {},
         },
       ];
     }
@@ -206,7 +211,10 @@ export function isAnsweredValue(question: PublicQuestion, value: unknown): boole
     case 'ranking':
       return readRankingOptions(readRecord(value).rankedOptions).length > 0;
     case 'text':
-      return Boolean(readString(readRecord(value).textValue));
+      return (
+        Boolean(readString(readRecord(value).textValue)) &&
+        (!requiresTextOpinionType(question) || Boolean(readString(readRecord(value).opinionType)))
+      );
     case 'image_tag':
       return readImageTagPoints(readRecord(value).points).length > 0;
     case 'participant_image_tag': {
@@ -222,7 +230,71 @@ export function isAnsweredValue(question: PublicQuestion, value: unknown): boole
 }
 
 export function findMissingRequiredQuestions(section: PublicSurveySection, values: Record<string, unknown>): PublicQuestion[] {
-  return section.questions.filter((question) => question.isRequired && !isAnsweredValue(question, values[question.id]));
+  const missingQuestions: PublicQuestion[] = [];
+  const handledMultiSelectGroups = new Set<string>();
+
+  for (const question of section.questions) {
+    const multiSelectGroup = readMultiSelectDisplayGroup(question);
+
+    if (multiSelectGroup) {
+      if (handledMultiSelectGroups.has(multiSelectGroup)) {
+        continue;
+      }
+
+      handledMultiSelectGroups.add(multiSelectGroup);
+
+      const groupQuestions = section.questions.filter((item) => readMultiSelectDisplayGroup(item) === multiSelectGroup);
+      if (isRequiredMultiSelectGroupMissing(groupQuestions, values)) {
+        missingQuestions.push(groupQuestions[0]);
+      }
+
+      continue;
+    }
+
+    if (question.isRequired && !isAnsweredValue(question, values[question.id])) {
+      missingQuestions.push(question);
+    }
+  }
+
+  return missingQuestions;
+}
+
+function isRequiredMultiSelectGroupMissing(questions: PublicQuestion[], values: Record<string, unknown>): boolean {
+  const isRequired = questions.some((question) => question.isRequired);
+
+  if (!isRequired) {
+    return false;
+  }
+
+  const selectedCount = questions.reduce((count, question) => {
+    return count + readStringArray(readRecord(values[question.id]).selectedOptions).length;
+  }, 0);
+  const minSelections = readGroupSelectionCount(questions, ['minSelections', 'minSelect']) ?? 1;
+
+  return selectedCount < minSelections;
+}
+
+function readMultiSelectDisplayGroup(question: PublicQuestion): string | undefined {
+  if (question.questionType !== 'multi_select') {
+    return undefined;
+  }
+
+  return readString(question.config.displayGroup);
+}
+
+function readGroupSelectionCount(questions: PublicQuestion[], keys: string[]): number | undefined {
+  for (const question of questions) {
+    for (const source of [question.validation, question.config]) {
+      for (const key of keys) {
+        const value = source[key];
+        if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+          return value;
+        }
+      }
+    }
+  }
+
+  return undefined;
 }
 
 function readRecord(value: unknown): Record<string, unknown> {
@@ -356,6 +428,25 @@ function readParticipantImageTagPoints(value: unknown, requireText: boolean): Pa
 
 function isTagTextRequired(question: PublicQuestion): boolean {
   return question.validation.requiredTagText === true || question.config.requireText === true;
+}
+
+function requiresTextOpinionType(question: PublicQuestion): boolean {
+  if (question.questionType !== 'text') {
+    return false;
+  }
+
+  if (question.config.requiresOpinionType === true || question.config.textMode === 'select_text') {
+    return true;
+  }
+
+  return ['options', 'opinionTypes', 'textCategories', 'categoryOptions', 'opinionOptions'].some((key) => {
+    const value = question.config[key];
+    return Array.isArray(value) && value.length > 0;
+  });
+}
+
+function readLowScoreThreshold(question: PublicQuestion): number {
+  return typeof question.config.lowScoreThreshold === 'number' ? question.config.lowScoreThreshold : 2;
 }
 
 function pickDefined(record: Record<string, unknown>): Record<string, unknown> {

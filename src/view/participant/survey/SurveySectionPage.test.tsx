@@ -22,6 +22,10 @@ describe('SurveySectionPage', () => {
     });
 
     expect(await screen.findByText('세탁실 만족도는 어떤가요?')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^1\. 세탁실 만족도는 어떤가요/ })).toBeInTheDocument();
+    expect(screen.getByText('2/2섹션')).toBeInTheDocument();
+    expect(screen.getByText('100%')).toBeInTheDocument();
+    expect(document.querySelector('.survey-section-page__body')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: '5' }));
 
@@ -98,4 +102,74 @@ describe('SurveySectionPage', () => {
     expect(screen.queryByText('건의할 사진을 올려주세요.')).not.toBeInTheDocument();
     expect(screen.queryByText('추가로 개선할 항목을 선택해주세요.')).not.toBeInTheDocument();
   });
+
+  it('renders grouped scale questions as expandable rows and stores answers per original question', async () => {
+    const survey = buildScaleGroupSurvey();
+
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/sections/facility',
+      controller: createFakeParticipantApiController({ survey }),
+    });
+
+    expect(await screen.findByRole('heading', { name: /^1\. .*소등제도/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /소등시간/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /소등 여부/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '1' })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '검토하기' }));
+
+    expect(await screen.findByText('필수 문항입니다.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '1' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '4' }));
+
+    await waitFor(() => {
+      expect(useParticipantDraftStore.getState().values['question-light-off-time']).toEqual({ scoreValue: 4 });
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /소등 여부/ }));
+    await userEvent.click(screen.getByRole('button', { name: '5' }));
+
+    await waitFor(() => {
+      expect(useParticipantDraftStore.getState().values['question-light-off-enabled']).toEqual({ scoreValue: 5 });
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: '검토하기' }));
+
+    expect(await screen.findByText('제출 전 검토')).toBeInTheDocument();
+  });
 });
+
+function buildScaleGroupSurvey() {
+  const facilitySection = publishedSurveyFixture.sections[1];
+  const baseScaleQuestion = facilitySection.questions[0];
+  const displayGroup = "'소등제도'와 관련된 다음 항목에 대한 만족도에 대해 어떻게 생각하십니까?";
+
+  return {
+    ...publishedSurveyFixture,
+    sections: [
+      publishedSurveyFixture.sections[0],
+      {
+        ...facilitySection,
+        questions: [
+          {
+            ...baseScaleQuestion,
+            id: 'question-light-off-time',
+            questionKey: 'light_off_time',
+            title: { ko: `${displayGroup} [(1) 소등시간]` },
+            orderIndex: 0,
+            config: { ...baseScaleQuestion.config, displayGroup },
+          },
+          {
+            ...baseScaleQuestion,
+            id: 'question-light-off-enabled',
+            questionKey: 'light_off_enabled',
+            title: { ko: `${displayGroup} [(2) 소등 여부]` },
+            orderIndex: 1,
+            config: { ...baseScaleQuestion.config, displayGroup },
+          },
+        ],
+      },
+    ],
+  };
+}

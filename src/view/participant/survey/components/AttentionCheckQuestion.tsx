@@ -8,7 +8,7 @@ export function AttentionCheckQuestion(props: QuestionComponentProps<unknown>) {
   const options = getDisplayOptions(props.question, props.locale, props.fallbackLocale);
 
   return (
-    <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error}>
+    <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
       <div className="attention-check-question">
         {options.map((option) => (
           <button

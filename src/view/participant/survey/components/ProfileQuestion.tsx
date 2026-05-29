@@ -95,7 +95,7 @@ export function ProfileQuestion(props: QuestionComponentProps<unknown>) {
   const configuredOptions = getDisplayOptions(props.question, props.locale, props.fallbackLocale);
 
   return (
-    <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error}>
+    <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
       <div className="profile-question">
         {fields.map((field) => (
           <Select

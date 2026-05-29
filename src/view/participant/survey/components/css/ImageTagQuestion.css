@@ -1,5 +1,9 @@
 @import "./MultiSelectQuestion.css";
 
+.image-tag-question {
+  position: relative;
+}
+
 .image-tag-question__canvas {
   position: relative;
   overflow: hidden;
@@ -12,8 +16,8 @@
 }
 
 .image-tag-question__canvas.is-drop-ready {
-  border-color: var(--color-danger);
-  box-shadow: 0 0 0 3px var(--color-danger-bg);
+  border-color: var(--color-border-strong);
+  box-shadow: none;
 }
 
 .image-tag-question__image-stage {
@@ -37,17 +41,37 @@
 
 .image-tag-question__pin {
   position: absolute;
-  width: 32px;
-  height: 32px;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
   transform: translate(-50%, -50%);
-  border: 2px solid var(--color-bg);
-  border-radius: var(--radius-pill);
-  background: var(--color-brand-600);
-  color: var(--color-bg);
-  font-size: var(--font-size-caption);
-  font-weight: var(--font-weight-bold);
-  box-shadow: var(--shadow-soft);
+  border: 0;
+  background: transparent;
+  color: transparent;
   cursor: pointer;
+}
+
+.image-tag-question__pin::before {
+  width: 25px;
+  height: 25px;
+  background: url("../../../../../assets/handong.png") center / contain no-repeat;
+  content: "";
+  filter: drop-shadow(0 2px 4px rgba(25, 31, 40, 0.18));
+}
+
+.image-tag-question__sticker-hint {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  width: 25px;
+  height: 25px;
+  animation: image-tag-question-sticker-hint 2.8s var(--ease-standard) infinite;
+  background: url("../../../../../assets/handong.png") center / contain no-repeat;
+  filter: drop-shadow(0 2px 4px rgba(25, 31, 40, 0.18));
+  pointer-events: none;
+  will-change: transform;
 }
 
 .image-tag-question__pin:focus-visible,
@@ -56,7 +80,6 @@
   box-shadow: var(--focus-ring), var(--shadow-soft);
 }
 
-.image-tag-question__count,
 .image-tag-question__error {
   font-size: var(--font-size-small);
 }
@@ -69,6 +92,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  justify-content: center;
 }
 
 .image-tag-question__drag-dot {
@@ -78,10 +102,9 @@
   height: 52px;
   flex: 0 0 52px;
   place-items: center;
-  border: 3px solid var(--color-bg);
+  border: 0;
   border-radius: var(--radius-pill);
-  background: var(--color-danger);
-  box-shadow: var(--shadow-soft);
+  background: transparent;
   cursor: grab;
   touch-action: none;
   transition:
@@ -90,10 +113,9 @@
 }
 
 .image-tag-question__drag-dot span {
-  width: 12px;
-  height: 12px;
-  border-radius: var(--radius-pill);
-  background: var(--color-bg);
+  width: 25px;
+  height: 25px;
+  background: url("../../../../../assets/handong.png") center / contain no-repeat;
 }
 
 .image-tag-question.is-dragging .image-tag-question__drag-dot {
@@ -104,13 +126,11 @@
 .image-tag-question__drag-preview {
   position: fixed;
   z-index: 60;
-  width: 52px;
-  height: 52px;
+  width: 25px;
+  height: 25px;
   transform: translate(-50%, -50%);
-  border: 3px solid var(--color-bg);
-  border-radius: var(--radius-pill);
-  background: var(--color-danger);
-  box-shadow: var(--shadow-soft);
+  background: url("../../../../../assets/handong.png") center / contain no-repeat;
+  filter: drop-shadow(0 2px 4px rgba(25, 31, 40, 0.18));
   pointer-events: none;
 }
 
@@ -119,13 +139,30 @@
   opacity: 0.45;
 }
 
-.image-tag-question__tool-copy {
-  display: grid;
-  gap: var(--space-1);
+@keyframes image-tag-question-sticker-hint {
+  0% {
+    opacity: 0.58;
+    transform: translate(var(--image-tag-hint-start-x, 50%), var(--image-tag-hint-start-y, 100%)) translate(-50%, -50%) scale(0.96);
+  }
+
+  46%,
+  62% {
+    opacity: 1;
+    transform: translate(var(--image-tag-hint-end-x, 50%), var(--image-tag-hint-end-y, 50%)) translate(-50%, -50%) scale(1);
+  }
+
+  100% {
+    opacity: 0.58;
+    transform: translate(var(--image-tag-hint-start-x, 50%), var(--image-tag-hint-start-y, 100%)) translate(-50%, -50%) scale(0.96);
+  }
 }
 
-.image-tag-question__tool-copy p {
-  margin: 0;
+@media (prefers-reduced-motion: reduce) {
+  .image-tag-question__sticker-hint {
+    animation: none;
+    opacity: 0.82;
+    transform: translate(var(--image-tag-hint-end-x, 50%), var(--image-tag-hint-end-y, 50%)) translate(-50%, -50%);
+  }
 }
 
 .image-tag-question__dialog-backdrop {
