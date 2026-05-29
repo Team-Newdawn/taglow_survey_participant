@@ -76,6 +76,7 @@ describe('ParticipantPayloadMapper', () => {
           config: {
             choices: [
               { id: 'cleanliness', label_ko: '청결', label_en: 'Cleanliness' },
+              { value: '05_00_07_00', labelKo: '05:00~07:00' },
               'other',
             ],
           },
@@ -114,6 +115,7 @@ describe('ParticipantPayloadMapper', () => {
               config: {
                 options: [
                   { value: 'cleanliness', label: { ko: '청결', en: 'Cleanliness' }, metadata: {} },
+                  { value: '05_00_07_00', label: { ko: '05:00~07:00' }, metadata: {} },
                   { value: 'other', label: { ko: 'other' } },
                 ],
               },

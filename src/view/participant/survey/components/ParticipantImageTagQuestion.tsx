@@ -8,6 +8,7 @@ import { ImageTagPointDialog } from './ImageTagPointDialog';
 import { QuestionShell } from './QuestionShell';
 import { getImageTagOptions } from './imageTagOptions';
 import type { QuestionComponentProps } from './questionComponentTypes';
+import { useStickerHintMotion } from './useStickerHintMotion';
 import './css/ImageTagQuestion.css';
 
 type ParticipantImageTagEditor = {
@@ -23,6 +24,7 @@ type DragPreview = {
 
 export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknown>) {
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const dragDotRef = useRef<HTMLButtonElement | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [editor, setEditor] = useState<ParticipantImageTagEditor | null>(null);
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
@@ -39,6 +41,8 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
   const imageUrl = uploadedUrlQuery.data ?? value.image?.signedUrl;
   const canAddPoint = Boolean(imageUrl) && points.length < maxTags;
   const isDraggingNewPoint = Boolean(dragPreview);
+  const shouldShowStickerHint = canAddPoint && points.length === 0 && !isDraggingNewPoint && !editor;
+  const { rootRef, hintStyle } = useStickerHintMotion(shouldShowStickerHint, imageRef, dragDotRef);
   const rootClassName = isDraggingNewPoint
     ? 'image-tag-question participant-image-tag-question is-dragging'
     : 'image-tag-question participant-image-tag-question';
@@ -156,8 +160,8 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
   };
 
   return (
-    <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error}>
-      <div className={rootClassName}>
+    <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
+      <div ref={rootRef} className={rootClassName}>
         <div className="participant-image-tag-question__upload">
           <label className="participant-image-tag-question__upload-button">
             <span>{value.image ? '사진 다시 업로드' : '사진 업로드'}</span>
@@ -209,10 +213,11 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
 
         <div className="image-tag-question__toolbelt">
           <button
+            ref={dragDotRef}
             type="button"
             className="image-tag-question__drag-dot"
             disabled={!canAddPoint}
-            aria-label="새 위치 점을 이미지로 드래그"
+            aria-label="새 위치 스티커를 이미지로 드래그"
             onPointerDown={startDraggingNewPoint}
             onPointerMove={moveDraggingNewPoint}
             onPointerUp={finishDraggingNewPoint}
@@ -220,13 +225,9 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
           >
             <span aria-hidden="true" />
           </button>
-          <div className="image-tag-question__tool-copy">
-            <p>빨간 점을 이미지 위로 옮겨 위치를 추가해주세요.</p>
-            <p className="image-tag-question__count">
-              {points.length}/{maxTags}개 위치
-            </p>
-          </div>
         </div>
+
+        {shouldShowStickerHint ? <span className="image-tag-question__sticker-hint" style={hintStyle} aria-hidden="true" /> : null}
 
         {dragPreview ? (
           <span

@@ -17,7 +17,7 @@ const reasons = [
 ];
 
 export function LowScoreFollowUp({ scoreValue, reason, text, threshold = 2, onChange }: LowScoreFollowUpProps) {
-  if (!scoreValue || scoreValue > threshold + 1) {
+  if (!scoreValue || scoreValue > threshold) {
     return null;
   }
 

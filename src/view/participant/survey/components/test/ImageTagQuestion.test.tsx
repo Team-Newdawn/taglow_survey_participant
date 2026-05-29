@@ -26,10 +26,10 @@ describe('ImageTagQuestion', () => {
     validation: {},
   };
 
-  it('opens a point dialog after dragging the red dot onto the image', async () => {
+  it('opens a point dialog after dragging the sticker onto the image', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    renderWithProviders(
+    const { container } = renderWithProviders(
       <ImageTagQuestion
         question={question}
         assets={publishedSurveyFixture.assets}
@@ -41,9 +41,12 @@ describe('ImageTagQuestion', () => {
     );
 
     mockImageRect(await screen.findByRole('img', { name: '위치를 선택할 시설 이미지' }));
+    expect(container.querySelector('.image-tag-question__sticker-hint')).toBeInTheDocument();
+
     dragNewPointToImage(50, 25);
 
     expect(await screen.findByRole('dialog', { name: '위치 내용 입력' })).toBeInTheDocument();
+    expect(container.querySelector('.image-tag-question__sticker-hint')).not.toBeInTheDocument();
     expect(screen.getByLabelText('카테고리')).toHaveValue('냉난방');
 
     await user.type(screen.getByLabelText('이유'), '창틀이 흔들립니다.');
@@ -93,7 +96,7 @@ describe('ImageTagQuestion', () => {
 });
 
 function dragNewPointToImage(clientX: number, clientY: number) {
-  const dot = screen.getByRole('button', { name: '새 위치 점을 이미지로 드래그' });
+  const dot = screen.getByRole('button', { name: '새 위치 스티커를 이미지로 드래그' });
   fireEvent.pointerDown(dot, { pointerId: 1, clientX: 0, clientY: 120 });
   fireEvent.pointerUp(dot, { pointerId: 1, clientX, clientY });
 }

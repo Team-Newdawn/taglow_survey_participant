@@ -1,23 +1,86 @@
-.multi-select-question,
-.text-question,
-.ranking-question,
-.image-tag-question {
+.multi-select-question {
   display: grid;
   gap: var(--space-3);
 }
 
-.multi-select-question p,
-.ranking-question p,
-.image-tag-question p {
+.multi-select-question p {
   margin: 0;
   color: var(--color-text-muted);
   font-size: var(--font-size-small);
 }
 
-.multi-select-question__chips,
-.text-question__chips,
-.image-tag-question__chips {
-  display: flex;
-  flex-wrap: wrap;
+.multi-select-question__options {
+  display: grid;
   gap: var(--space-2);
+}
+
+.multi-select-question__option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 48px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text);
+  cursor: pointer;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+.multi-select-question__option.is-selected {
+  border-color: var(--color-brand-600);
+  background: var(--color-brand-100);
+  color: var(--color-brand-700);
+  font-weight: var(--font-weight-bold);
+}
+
+.multi-select-question__option.is-disabled {
+  background: var(--color-surface-subtle);
+  color: var(--color-text-subtle);
+  cursor: not-allowed;
+}
+
+.multi-select-question__option input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--color-brand-600);
+}
+
+.multi-select-question__option:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+.multi-select-question__option span {
+  min-width: 0;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+}
+
+.multi-select-question__other {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.multi-select-question__other input {
+  min-height: 48px;
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text);
+}
+
+.multi-select-question__other input:focus-visible {
+  border-color: var(--color-brand-600);
+  box-shadow: var(--focus-ring);
+  outline: none;
 }

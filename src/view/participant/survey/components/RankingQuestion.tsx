@@ -32,7 +32,7 @@ export function RankingQuestion(props: QuestionComponentProps<unknown>) {
   };
 
   return (
-    <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error}>
+    <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
       <div className="ranking-question">
         <p>가장 중요한 것부터 선택해주세요.</p>
         {options.map((option) => {

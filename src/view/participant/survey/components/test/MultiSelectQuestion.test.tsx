@@ -21,13 +21,13 @@ describe('MultiSelectQuestion', () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: '기타' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: '기타' }));
     expect(onChange).not.toHaveBeenCalled();
 
     rerender(
       <MultiSelectQuestion question={question} assets={[]} locale="ko" fallbackLocale="ko" value={{ selectedOptions: [] }} onChange={onChange} />,
     );
-    await userEvent.click(screen.getByRole('button', { name: '청결' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: '청결' }));
 
     expect(onChange).toHaveBeenCalledWith({ selectedOptions: ['cleanliness'] });
   });

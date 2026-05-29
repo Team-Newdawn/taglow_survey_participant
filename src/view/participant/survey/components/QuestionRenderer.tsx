@@ -17,6 +17,7 @@ type QuestionRendererProps = {
   fallbackLocale: Locale;
   value: unknown;
   error?: string;
+  number?: number;
   onChange: (value: unknown) => void;
 };
 

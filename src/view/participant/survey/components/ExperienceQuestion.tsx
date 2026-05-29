@@ -14,7 +14,7 @@ export function ExperienceQuestion(props: QuestionComponentProps<unknown>) {
   const options = configuredOptions.length > 0 ? configuredOptions : getDefaultOptions('experience');
 
   return (
-    <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error}>
+    <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
       <div className="experience-question">
         {options.map((option) => (
           <button

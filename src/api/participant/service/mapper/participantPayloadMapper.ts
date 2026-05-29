@@ -264,18 +264,26 @@ function normalizeLocalizedLabel(record: Record<string, unknown>, fallback: stri
   const labelRecord = parseRecord(label);
   const ko =
     readString(labelRecord.ko) ??
+    readString(record.labelKo) ??
     readString(record.label_ko) ??
+    readString(record.titleKo) ??
     readString(record.title_ko) ??
+    readString(record.textKo) ??
     readString(record.text_ko) ??
+    readString(record.nameKo) ??
     readString(record.name_ko) ??
     readString(record.title) ??
     readString(record.text) ??
     fallback;
   const en =
     readString(labelRecord.en) ??
+    readString(record.labelEn) ??
     readString(record.label_en) ??
+    readString(record.titleEn) ??
     readString(record.title_en) ??
+    readString(record.textEn) ??
     readString(record.text_en) ??
+    readString(record.nameEn) ??
     readString(record.name_en);
 
   return {

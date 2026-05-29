@@ -13,12 +13,15 @@ import { StepHeader } from '../../../components/StepHeader';
 import { useParticipantDraftStore } from '../../../store/participantDraftStore';
 import { useParticipantLocaleStore } from '../../../store/participantLocaleStore';
 import { useParticipantProgressStore } from '../../../store/participantProgressStore';
-import { findMissingRequiredQuestions, isAnsweredValue } from '../../../utils/answerNormalizer';
+import { findMissingRequiredQuestions } from '../../../utils/answerNormalizer';
 import { buildDraftKey } from '../../../utils/draftKey';
 import { formatShortDateTime } from '../../../utils/dateTime';
 import { readLocalizedText, resolveSurveyDefaultLocale } from '../../../utils/i18nText';
 import { DraftRestoreBanner } from './components/DraftRestoreBanner';
+import { MultiSelectQuestionGroup } from './components/MultiSelectQuestionGroup';
 import { QuestionRenderer } from './components/QuestionRenderer';
+import { ScaleQuestionGroup } from './components/ScaleQuestionGroup';
+import { buildQuestionRenderBlocks, getQuestionRenderBlockId } from './components/questionRenderBlocks';
 import './css/SurveySectionPage.css';
 
 const DRAFT_SCHEMA_VERSION = 1;
@@ -145,7 +148,9 @@ export function SurveySectionPage() {
   const currentQuestionScreen = questionScreens[activeQuestionScreenIndex] ?? [];
   const hasPreviousQuestionScreen = activeQuestionScreenIndex > 0;
   const hasNextQuestionScreen = activeQuestionScreenIndex < questionScreens.length - 1;
-  const answeredCount = visibleQuestions.filter((question) => isAnsweredValue(question, form.watch(question.id))).length;
+  const visibleRenderBlocks = buildQuestionRenderBlocks(visibleQuestions);
+  const currentRenderBlocks = buildQuestionRenderBlocks(currentQuestionScreen);
+  const renderBlockNumberById = new Map(visibleRenderBlocks.map((block, index) => [getQuestionRenderBlockId(block), index + 1] as const));
   const missingQuestions = findMissingRequiredQuestions(section, form.getValues()).filter((question) =>
     currentQuestionScreen.some((visibleQuestion) => visibleQuestion.id === question.id),
   );
@@ -210,36 +215,78 @@ export function SurveySectionPage() {
         eyebrow={`${sectionIndex + 1}/${survey.sections.length}`}
         title={readLocalizedText(section.title, displayLocale, defaultLocale)}
         description={section.description ? readLocalizedText(section.description, displayLocale, defaultLocale) : undefined}
-        current={answeredCount}
-        total={visibleQuestions.length}
+        current={sectionIndex + 1}
+        total={survey.sections.length}
+        progressLabel={`${sectionIndex + 1}/${survey.sections.length}섹션`}
       />
 
-      {restoreDraft ? (
-        <DraftRestoreBanner updatedAt={formatShortDateTime(restoreDraft.updatedAt)} onRestore={restoreCurrentDraft} onRestart={discardRestoreDraft} />
-      ) : null}
+      <div className="survey-section-page__body">
+        {restoreDraft ? (
+          <DraftRestoreBanner updatedAt={formatShortDateTime(restoreDraft.updatedAt)} onRestore={restoreCurrentDraft} onRestart={discardRestoreDraft} />
+        ) : null}
 
-      {missingQuestionIds.length > 0 ? (
-        <Message tone="error" title="필수 문항을 먼저 답해주세요.">
-          <p>응답하지 않은 문항을 확인한 뒤 다음 섹션으로 이동할 수 있습니다.</p>
-        </Message>
-      ) : null}
+        {missingQuestionIds.length > 0 ? (
+          <Message tone="error" title="필수 문항을 먼저 답해주세요.">
+            <p>응답하지 않은 문항을 확인한 뒤 다음 섹션으로 이동할 수 있습니다.</p>
+          </Message>
+        ) : null}
 
-      <form className="survey-section-page__questions">
-        {currentQuestionScreen.map((question) => (
-          <QuestionRenderer
-            key={question.id}
-            question={question}
-            assets={survey.assets}
-            locale={displayLocale}
-            fallbackLocale={defaultLocale}
-            value={form.watch(question.id)}
-            error={missingQuestionIds.includes(question.id) ? '필수 문항입니다.' : undefined}
-            onChange={(value) => {
-              form.setValue(question.id, value, { shouldDirty: true, shouldTouch: true });
-            }}
-          />
-        ))}
-      </form>
+        <form className="survey-section-page__questions">
+          {currentRenderBlocks.map((block) => {
+            if (block.type === 'scale_group') {
+              return (
+                <ScaleQuestionGroup
+                  key={block.id}
+                  groupTitle={block.groupTitle}
+                  questions={block.questions}
+                  locale={displayLocale}
+                  fallbackLocale={defaultLocale}
+                  values={Object.fromEntries(block.questions.map((question) => [question.id, form.watch(question.id)]))}
+                  missingQuestionIds={missingQuestionIds}
+                  number={renderBlockNumberById.get(block.id)}
+                  onChange={(questionId, value) => {
+                    form.setValue(questionId, value, { shouldDirty: true, shouldTouch: true });
+                  }}
+                />
+              );
+            }
+
+            if (block.type === 'multi_select_group') {
+              return (
+                <MultiSelectQuestionGroup
+                  key={block.id}
+                  groupTitle={block.groupTitle}
+                  questions={block.questions}
+                  locale={displayLocale}
+                  fallbackLocale={defaultLocale}
+                  values={Object.fromEntries(block.questions.map((question) => [question.id, form.watch(question.id)]))}
+                  missingQuestionIds={missingQuestionIds}
+                  number={renderBlockNumberById.get(block.id)}
+                  onChange={(questionId, value) => {
+                    form.setValue(questionId, value, { shouldDirty: true, shouldTouch: true });
+                  }}
+                />
+              );
+            }
+
+            return (
+              <QuestionRenderer
+                key={block.question.id}
+                question={block.question}
+                assets={survey.assets}
+                locale={displayLocale}
+                fallbackLocale={defaultLocale}
+                value={form.watch(block.question.id)}
+                error={missingQuestionIds.includes(block.question.id) ? '필수 문항입니다.' : undefined}
+                number={renderBlockNumberById.get(block.question.id)}
+                onChange={(value) => {
+                  form.setValue(block.question.id, value, { shouldDirty: true, shouldTouch: true });
+                }}
+              />
+            );
+          })}
+        </form>
+      </div>
 
       <nav className="survey-section-page__bottom" aria-label="섹션 이동">
         <Button type="button" variant="secondary" onClick={goPrevious}>
