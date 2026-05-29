@@ -37,10 +37,10 @@ export function ParticipantLoginPage() {
       <section className="participant-login-page__content">
         <p className="participant-login-page__eyebrow">Google 로그인</p>
         <h1>{survey ? readLocalizedText(survey.title, displayLocale, defaultLocale) : '설문 참여'}</h1>
-        <p>학교 Google 계정으로 로그인하면 이어서 설문에 참여할 수 있습니다.</p>
+        <p>Google 계정으로 로그인하면 이어서 설문에 참여할 수 있습니다.</p>
 
-        <Message tone="info" title="@handong.ac.kr 계정만 제출할 수 있습니다.">
-          <p>개인 Google 계정으로 로그인한 경우 접근이 제한될 수 있습니다.</p>
+        <Message tone="info" title="Google 계정으로 참여할 수 있습니다.">
+          <p>로그인 후 원래 설문으로 돌아옵니다.</p>
         </Message>
 
         {error ? (

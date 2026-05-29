@@ -29,7 +29,7 @@ describe('ParticipantImageTagQuestion', () => {
     const user = userEvent.setup();
     const uploadQuestionImage = vi.fn(async () => ({
       storageBucket: 'survey-assets',
-      storagePath: 'participant-uploads/survey-1/user-1/question-upload-tag/image.png',
+      storagePath: 'participant-uploads/upload-1.png',
       signedUrl: 'https://example.com/uploaded.png',
       metadata: { originalName: 'upload.png' },
     }));

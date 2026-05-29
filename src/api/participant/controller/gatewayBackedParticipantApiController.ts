@@ -1,4 +1,3 @@
-import { isAllowedParticipantEmail } from '../../../utils/authDomain';
 import type { SurveyAsset } from '../model/asset';
 import type { ParticipantSession, SurveyAccessResult } from '../model/auth';
 import type {
@@ -66,10 +65,6 @@ export class GatewayBackedParticipantApiController implements ParticipantApiCont
     const session = await this.getCurrentSession();
     if (!session) {
       return { status: 'unauthenticated', survey };
-    }
-
-    if (!isAllowedParticipantEmail(session.email)) {
-      return { status: 'not_handong_email', survey, session };
     }
 
     const duplicate = await this.checkDuplicateSubmission({

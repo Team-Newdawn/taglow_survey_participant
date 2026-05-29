@@ -3,7 +3,6 @@ import { Navigate, useParams } from 'react-router-dom';
 
 import { useDuplicateSubmissionQuery, useParticipantSessionQuery, usePublicSurveyQuery } from '../api/participant';
 import { Message } from '../components/Message';
-import { isAllowedParticipantEmail } from '../utils/authDomain';
 
 export function RequirePublishedSurvey(props: PropsWithChildren) {
   const publicSlug = useRequiredPublicSlug();
@@ -37,10 +36,6 @@ export function RequireParticipantAccess(props: PropsWithChildren) {
 
   if (sessionQuery.isPending) {
     return <GuardState title="참여 가능 여부를 확인하고 있습니다." />;
-  }
-
-  if (session && !isAllowedParticipantEmail(session.email)) {
-    return <Navigate to={`/survey/${publicSlug}/access-denied`} replace />;
   }
 
   if (surveyQuery.isPending) {

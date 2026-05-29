@@ -128,7 +128,7 @@ describe('ParticipantPayloadMapper', () => {
     const responsePayload = mapper.toCreateResponsePayload({
       surveyId: 'survey-1',
       participantUserId: 'user-1',
-      participantEmail: 'Student@HANDONG.AC.KR',
+      participantEmail: 'Student@EXAMPLE.COM',
       locale: 'ko',
       profile: {
         gender: 'female',
@@ -157,7 +157,7 @@ describe('ParticipantPayloadMapper', () => {
     );
 
     expect(responsePayload).toMatchObject({
-      participant_email: 'student@handong.ac.kr',
+      participant_email: 'student@example.com',
       status: 'submitted',
     });
     expect(answerPayload).toMatchObject({

@@ -8,7 +8,6 @@ export type ParticipantSession = Readonly<{
 export type SurveyAccessStatus =
   | 'allowed'
   | 'unauthenticated'
-  | 'not_handong_email'
   | 'survey_not_found'
   | 'survey_closed'
   | 'already_submitted';

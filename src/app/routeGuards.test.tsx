@@ -33,25 +33,21 @@ describe('participant route guards', () => {
     await waitFor(() => expect(screen.getByText('Google 로그인')).toBeInTheDocument());
   });
 
-  it('routes non-Handong participants to access denied', async () => {
+  it('allows any Google account with a Supabase session to continue', async () => {
     renderWithProviders(<AppRoutes />, {
       route: '/survey/fixture-survey/intro',
       controller: createFakeParticipantApiController({ session: { userId: 'user-1', email: 'student@example.com' } }),
     });
 
-    await waitFor(() => expect(screen.getByText('학교 Google 계정으로 다시 로그인해주세요.')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('설문 안내')).toBeInTheDocument());
   });
 
-  it('routes non-Handong participants to access denied even when RLS hides the survey row', async () => {
+  it('renders a generic access denied page when the route is opened directly', async () => {
     renderWithProviders(<AppRoutes />, {
-      route: '/survey/fixture-survey/intro',
-      controller: createFakeParticipantApiController({
-        session: { userId: 'user-1', email: 'student@example.com' },
-        surveyError: new Error('RLS prevented survey select'),
-      }),
+      route: '/survey/fixture-survey/access-denied',
     });
 
-    await waitFor(() => expect(screen.getByText('학교 Google 계정으로 다시 로그인해주세요.')).toBeInTheDocument());
+    expect(screen.getByText('이 설문에 접근할 수 없습니다.')).toBeInTheDocument();
   });
 
   it('routes duplicate participants to already-submitted page', async () => {

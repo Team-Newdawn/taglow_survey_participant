@@ -12,8 +12,8 @@ This directory contains participant authentication pages.
 
 - Show Google login entry for participant surveys.
 - Preserve return to the original public survey URL after login.
-- Explain the `@handong.ac.kr` restriction clearly.
-- Route non-Handong accounts to access denied.
+- Explain that a Google account is required.
+- Keep account-provider restrictions out of the auth page unless a later product decision adds them again.
 - Trigger sign-in through the participant controller/auth abstraction so Supabase Auth remains behind the API boundary.
 
 ## CSS Ownership

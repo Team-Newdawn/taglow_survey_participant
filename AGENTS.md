@@ -11,7 +11,7 @@ Before editing under `src/`, read this file plus the nearest `AGENTS.md` in the 
 
 ## Product Invariants
 
-- Participants enter by public URL or QR, authenticate with Google, and only `@handong.ac.kr` accounts can submit.
+- Participants enter by public URL or QR, authenticate with Google, and any Google account can submit unless duplicate or survey-status guards block them.
 - The participant view is mobile-first, section-based, bilingual (`ko` and `en`), and designed to reduce survey fatigue.
 - Drafts are client-side only until final submission. Keep drafts separated by `survey_id + participant_user_id`.
 - Drafts must never store Supabase service role keys, raw access/refresh tokens, or long-lived unnecessary personal raw payloads.
@@ -58,7 +58,7 @@ Rules:
 Follow the TDD v2 phases unless the user narrows the task:
 
 1. Public Survey Read: gateway, mapper, public slug bundle, sections/questions/assets, locale rendering.
-2. Auth / Access: Google auth, `@handong.ac.kr`, access denied/closed/not-found, duplicate query.
+2. Auth / Access: Google auth, access denied/closed/not-found, duplicate query.
 3. Survey Rendering: question renderer, question components, section navigation, validation.
 4. Draft Cache: draft key, localStorage, 5-10s debounce, visibility/beforeunload save, restore banner, submit-success delete.
 5. Submission: response insert plus answers bulk insert or `submit_survey_response` RPC, unique violation handling, complete page.
@@ -68,7 +68,7 @@ Follow the TDD v2 phases unless the user narrows the task:
 
 - Add unit tests for pure mappers, validators, draft storage, branch evaluation, and image ratio utilities.
 - Add component tests for each question type and section navigation behavior.
-- Add route tests for auth/domain/duplicate/closed/not-found states.
+- Add route tests for auth, duplicate, closed, not-found, and generic access-denied states.
 - Add Playwright coverage for the full happy path and at least one draft restore or submit failure path.
 - Add coverage for already-submitted routing and asset load failure.
 - Add database policy checks for RLS when using Supabase local or staging.
