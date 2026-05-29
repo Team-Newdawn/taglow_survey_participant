@@ -53,7 +53,12 @@ export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
   async signInWithGoogle(redirectTo: string): Promise<void> {
     const { error } = await this.supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo },
+      options: {
+        redirectTo,
+        queryParams: {
+          prompt: 'select_account',
+        },
+      },
     });
 
     if (error) {

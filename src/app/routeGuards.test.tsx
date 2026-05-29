@@ -33,6 +33,16 @@ describe('participant route guards', () => {
     await waitFor(() => expect(screen.getByText('Google 로그인')).toBeInTheDocument());
   });
 
+  it('routes the public survey entry to login even when a session exists', async () => {
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey',
+      controller: createFakeParticipantApiController({ session: { userId: 'user-1', email: 'student@example.com' } }),
+    });
+
+    await waitFor(() => expect(screen.getByText('Google 로그인')).toBeInTheDocument());
+    expect(screen.queryByText('설문 안내')).not.toBeInTheDocument();
+  });
+
   it('allows any Google account with a Supabase session to continue', async () => {
     renderWithProviders(<AppRoutes />, {
       route: '/survey/fixture-survey/intro',

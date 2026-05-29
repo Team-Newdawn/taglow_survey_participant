@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
-import { useParticipantApiController, usePublicSurveyQuery } from '../../../api/participant';
+import { useParticipantApiController, useParticipantSessionQuery, usePublicSurveyQuery } from '../../../api/participant';
 import { Button } from '../../../components/Button';
 import { Message } from '../../../components/Message';
 import { useParticipantLocaleStore } from '../../../store/participantLocaleStore';
@@ -11,6 +11,7 @@ import './css/ParticipantLoginPage.css';
 export function ParticipantLoginPage() {
   const { publicSlug = '' } = useParams();
   const controller = useParticipantApiController();
+  const sessionQuery = useParticipantSessionQuery();
   const surveyQuery = usePublicSurveyQuery(publicSlug);
   const { locale } = useParticipantLocaleStore();
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -25,6 +26,10 @@ export function ParticipantLoginPage() {
 
     try {
       const redirectTo = new URL(`/survey/${publicSlug}/intro`, window.location.origin).toString();
+      if (sessionQuery.data) {
+        await controller.signOut();
+      }
+
       await controller.signInWithGoogle({ redirectTo });
     } catch {
       setError('로그인을 시작하지 못했습니다. 잠시 후 다시 시도해주세요.');
@@ -49,7 +54,7 @@ export function ParticipantLoginPage() {
           </Message>
         ) : null}
 
-        <Button fullWidth disabled={isSigningIn} onClick={signIn}>
+        <Button fullWidth disabled={isSigningIn || sessionQuery.isPending} onClick={signIn}>
           {isSigningIn ? '로그인 이동 중' : 'Google로 계속하기'}
         </Button>
       </section>
