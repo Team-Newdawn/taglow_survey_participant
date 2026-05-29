@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { publishedSurveyFixture } from '../test/fixtures/publicSurveyFixture';
-import { buildSubmissionAnswers, extractRespondentProfile } from './answerNormalizer';
+import { publishedSurveyFixture } from '../../test/fixtures/publicSurveyFixture';
+import { buildSubmissionAnswers, extractRespondentProfile } from '../answerNormalizer';
 
 describe('buildSubmissionAnswers', () => {
   it('normalizes scale and multi-select form values into submission answers', () => {

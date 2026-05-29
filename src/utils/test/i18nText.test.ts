@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { readLocalizedText } from './i18nText';
+import { readLocalizedText } from '../i18nText';
 
 describe('readLocalizedText', () => {
   it('uses selected locale when available', () => {

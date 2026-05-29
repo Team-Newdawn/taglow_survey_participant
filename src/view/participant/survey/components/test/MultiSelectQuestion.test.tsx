@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { publishedSurveyFixture } from '../../../../test/fixtures/publicSurveyFixture';
-import { MultiSelectQuestion } from './MultiSelectQuestion';
+import { publishedSurveyFixture } from '../../../../../test/fixtures/publicSurveyFixture';
+import { MultiSelectQuestion } from '../MultiSelectQuestion';
 
 describe('MultiSelectQuestion', () => {
   const question = publishedSurveyFixture.sections[1].questions[1];

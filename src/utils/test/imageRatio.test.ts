@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { calculateImageRatio } from './imageRatio';
+import { calculateImageRatio } from '../imageRatio';
 
 describe('calculateImageRatio', () => {
   const rect = { left: 100, top: 50, width: 200, height: 100 };

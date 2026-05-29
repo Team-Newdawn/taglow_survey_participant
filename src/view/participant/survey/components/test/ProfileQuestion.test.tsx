@@ -2,9 +2,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { PublicQuestion } from '../../../../api/participant';
-import { publishedSurveyFixture } from '../../../../test/fixtures/publicSurveyFixture';
-import { ProfileQuestion } from './ProfileQuestion';
+import type { PublicQuestion } from '../../../../../api/participant';
+import { publishedSurveyFixture } from '../../../../../test/fixtures/publicSurveyFixture';
+import { ProfileQuestion } from '../ProfileQuestion';
 
 describe('ProfileQuestion', () => {
   const baseQuestion = publishedSurveyFixture.sections[0].questions[0];
