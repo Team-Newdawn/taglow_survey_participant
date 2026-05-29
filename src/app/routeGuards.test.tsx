@@ -7,9 +7,26 @@ import { renderWithProviders } from '../test/renderWithProviders';
 import { AppRoutes } from './router';
 
 describe('participant route guards', () => {
-  it('routes unauthenticated participants to login', async () => {
+  it('does not redirect the root route to a demo survey', () => {
+    renderWithProviders(<AppRoutes />, {
+      route: '/',
+    });
+
+    expect(screen.getByText('설문을 찾을 수 없습니다.')).toBeInTheDocument();
+  });
+
+  it('blocks demo routes and their child pages', () => {
     renderWithProviders(<AppRoutes />, {
       route: '/survey/demo/intro',
+    });
+
+    expect(screen.getByText('설문을 찾을 수 없습니다.')).toBeInTheDocument();
+    expect(screen.queryByText('Google 로그인')).not.toBeInTheDocument();
+  });
+
+  it('routes unauthenticated participants to login', async () => {
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/intro',
       controller: createFakeParticipantApiController({ session: null }),
     });
 
@@ -18,7 +35,7 @@ describe('participant route guards', () => {
 
   it('routes non-Handong participants to access denied', async () => {
     renderWithProviders(<AppRoutes />, {
-      route: '/survey/demo/intro',
+      route: '/survey/fixture-survey/intro',
       controller: createFakeParticipantApiController({ session: { userId: 'user-1', email: 'student@example.com' } }),
     });
 
@@ -27,7 +44,7 @@ describe('participant route guards', () => {
 
   it('routes non-Handong participants to access denied even when RLS hides the survey row', async () => {
     renderWithProviders(<AppRoutes />, {
-      route: '/survey/demo/intro',
+      route: '/survey/fixture-survey/intro',
       controller: createFakeParticipantApiController({
         session: { userId: 'user-1', email: 'student@example.com' },
         surveyError: new Error('RLS prevented survey select'),
@@ -39,7 +56,7 @@ describe('participant route guards', () => {
 
   it('routes duplicate participants to already-submitted page', async () => {
     renderWithProviders(<AppRoutes />, {
-      route: '/survey/demo/intro',
+      route: '/survey/fixture-survey/intro',
       controller: createFakeParticipantApiController({ duplicate: { alreadySubmitted: true, responseId: 'response-1' } }),
     });
 
@@ -48,7 +65,7 @@ describe('participant route guards', () => {
 
   it('routes closed surveys to closed page', async () => {
     renderWithProviders(<AppRoutes />, {
-      route: '/survey/demo/intro',
+      route: '/survey/fixture-survey/intro',
       controller: createFakeParticipantApiController({ survey: { ...publishedSurveyFixture, status: 'closed' } }),
     });
 

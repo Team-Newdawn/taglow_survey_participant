@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 
 import { ParticipantLoginPage } from '../view/participant/auth/ParticipantLoginPage';
 import { SurveyCompletePage } from '../view/participant/survey/SurveyCompletePage';
@@ -15,7 +15,20 @@ import { RequireParticipantAccess, RequirePublishedSurvey } from './routeGuards'
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/survey/demo" replace />} />
+      <Route path="/" element={<SurveyNotFoundPage />} />
+      <Route path="/demo" element={<SurveyNotFoundPage />} />
+      <Route path="/demo/*" element={<SurveyNotFoundPage />} />
+      <Route path="/survey/demo" element={<SurveyNotFoundPage />} />
+      <Route path="/survey/demo/login" element={<SurveyNotFoundPage />} />
+      <Route path="/survey/demo/intro" element={<SurveyNotFoundPage />} />
+      <Route path="/survey/demo/sections/:sectionKey" element={<SurveyNotFoundPage />} />
+      <Route path="/survey/demo/review" element={<SurveyNotFoundPage />} />
+      <Route path="/survey/demo/complete" element={<SurveyNotFoundPage />} />
+      <Route path="/survey/demo/closed" element={<SurveyNotFoundPage />} />
+      <Route path="/survey/demo/already-submitted" element={<SurveyNotFoundPage />} />
+      <Route path="/survey/demo/access-denied" element={<SurveyNotFoundPage />} />
+      <Route path="/survey/demo/not-found" element={<SurveyNotFoundPage />} />
+      <Route path="/survey/demo/*" element={<SurveyNotFoundPage />} />
       <Route path="/survey/:publicSlug" element={<SurveyEntryPage />} />
       <Route path="/survey/:publicSlug/login" element={<ParticipantLoginPage />} />
       <Route

@@ -18,7 +18,7 @@ describe('SurveySectionPage', () => {
 
   it('renders the section form and mirrors answer changes into the draft snapshot', async () => {
     renderWithProviders(<AppRoutes />, {
-      route: '/survey/demo/sections/facility',
+      route: '/survey/fixture-survey/sections/facility',
     });
 
     expect(await screen.findByText('세탁실 만족도는 어떤가요?')).toBeInTheDocument();
@@ -77,7 +77,7 @@ describe('SurveySectionPage', () => {
     };
 
     renderWithProviders(<AppRoutes />, {
-      route: '/survey/demo/sections/facility',
+      route: '/survey/fixture-survey/sections/facility',
       controller: createFakeParticipantApiController({ survey }),
     });
 
