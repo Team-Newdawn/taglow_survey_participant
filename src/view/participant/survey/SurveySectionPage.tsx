@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -30,6 +30,7 @@ const AUTOSAVE_DELAY_MS = 6500;
 export function SurveySectionPage() {
   const { publicSlug = '', sectionKey = '' } = useParams();
   const navigate = useNavigate();
+  const bodyRef = useRef<HTMLDivElement | null>(null);
   const surveyQuery = usePublicSurveyQuery(publicSlug);
   const sessionQuery = useParticipantSessionQuery();
   const survey = surveyQuery.data;
@@ -83,6 +84,7 @@ export function SurveySectionPage() {
   useEffect(() => {
     setQuestionScreenIndex(0);
     setMissingQuestionIds([]);
+    scrollElementToTop(bodyRef.current);
   }, [section?.id]);
 
   useEffect(() => {
@@ -220,7 +222,7 @@ export function SurveySectionPage() {
         progressLabel={`${sectionIndex + 1}/${survey.sections.length}섹션`}
       />
 
-      <div className="survey-section-page__body">
+      <div ref={bodyRef} className="survey-section-page__body">
         {restoreDraft ? (
           <DraftRestoreBanner updatedAt={formatShortDateTime(restoreDraft.updatedAt)} onRestore={restoreCurrentDraft} onRestart={discardRestoreDraft} />
         ) : null}
@@ -322,4 +324,16 @@ function buildQuestionScreens(questions: PublicQuestion[]): PublicQuestion[][] {
 
 function isImageTagQuestion(question: PublicQuestion): boolean {
   return question.questionType === 'image_tag' || question.questionType === 'participant_image_tag';
+}
+
+function scrollElementToTop(element: HTMLElement | null): void {
+  if (!element) {
+    return;
+  }
+
+  if (typeof element.scrollTo === 'function') {
+    element.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
+  element.scrollTop = 0;
 }

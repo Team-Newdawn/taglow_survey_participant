@@ -30,6 +30,12 @@ export function ScaleQuestionGroup(props: ScaleQuestionGroupProps) {
     }
   }, [firstMissingQuestionId]);
 
+  const moveToNextQuestion = (questionId: string) => {
+    const currentIndex = props.questions.findIndex((question) => question.id === questionId);
+    const nextQuestion = currentIndex >= 0 ? props.questions[currentIndex + 1] : undefined;
+    setExpandedQuestionId(nextQuestion?.id ?? null);
+  };
+
   return (
     <section className="scale-question-group" aria-labelledby={titleId}>
       <div className="scale-question-group__header">
@@ -54,6 +60,7 @@ export function ScaleQuestionGroup(props: ScaleQuestionGroupProps) {
           const isExpanded = expandedQuestionId === question.id;
           const error = props.missingQuestionIds.includes(question.id) ? '필수 문항입니다.' : undefined;
           const panelId = `${question.id}-scale-panel`;
+          const lowScoreThreshold = readLowScoreThreshold(question);
 
           return (
             <div key={question.id} className={`scale-question-group__item${error ? ' has-error' : ''}`}>
@@ -80,8 +87,13 @@ export function ScaleQuestionGroup(props: ScaleQuestionGroupProps) {
                 <div className="scale-question-group__panel" id={panelId}>
                   <ScaleQuestionBody
                     value={value}
-                    threshold={readLowScoreThreshold(question)}
+                    threshold={lowScoreThreshold}
                     onChange={(nextValue) => props.onChange(question.id, nextValue)}
+                    onScoreSelect={(score) => {
+                      if (score > lowScoreThreshold) {
+                        moveToNextQuestion(question.id);
+                      }
+                    }}
                   />
                   {error ? <p className="scale-question-group__error">{error}</p> : null}
                 </div>
