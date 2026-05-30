@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -16,6 +17,7 @@ import { DraftRestoreBanner } from './components/DraftRestoreBanner';
 import './css/SurveyIntroPage.css';
 
 const DRAFT_SCHEMA_VERSION = 1;
+const URL_PATTERN = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+)/gi;
 
 export function SurveyIntroPage() {
   const { publicSlug = '' } = useParams();
@@ -53,6 +55,8 @@ export function SurveyIntroPage() {
     return null;
   }
 
+  const surveyDescription = survey.description ? readLocalizedText(survey.description, displayLocale, defaultLocale).trim() : '';
+
   const startFresh = async () => {
     if (survey && session) {
       await storage.removeDraft(buildDraftKey({ surveyId: survey.id, participantUserId: session.userId }));
@@ -87,7 +91,6 @@ export function SurveyIntroPage() {
       <header className="survey-intro-page__header">
         <p className="survey-intro-page__eyebrow">설문 안내</p>
         <h1>{readLocalizedText(survey.title, displayLocale, defaultLocale)}</h1>
-        {survey.description ? <p>{readLocalizedText(survey.description, displayLocale, defaultLocale)}</p> : null}
       </header>
 
       {draft ? (
@@ -98,15 +101,11 @@ export function SurveyIntroPage() {
         />
       ) : null}
 
-      <section className="survey-intro-page__card">
-        <h2>응답 전 확인해주세요.</h2>
-        <ul>
-          <li>약 7~10분 정도 소요될 수 있습니다.</li>
-          <li>내가 경험한 항목만 답하면 됩니다.</li>
-          <li>시설 관련 의견은 사진이나 도면 위에 위치를 표시할 수 있습니다.</li>
-          <li>제출 전 언제든 검토하고 수정할 수 있습니다.</li>
-        </ul>
-      </section>
+      {surveyDescription ? (
+        <section className="survey-intro-page__card">
+          <p className="survey-intro-page__description">{renderTextWithLinks(surveyDescription)}</p>
+        </section>
+      ) : null}
 
       <section className="survey-intro-page__card">
         <h2>언어</h2>
@@ -137,4 +136,85 @@ export function SurveyIntroPage() {
       </div>
     </main>
   );
+}
+
+function renderTextWithLinks(text: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+
+  for (const match of text.matchAll(URL_PATTERN)) {
+    const rawUrl = match[0];
+    const start = match.index ?? 0;
+    const { urlText, trailingText } = splitTrailingUrlPunctuation(rawUrl);
+
+    if (start > cursor) {
+      nodes.push(text.slice(cursor, start));
+    }
+
+    if (urlText) {
+      nodes.push(
+        <a key={`${start}-${urlText}`} href={buildLinkHref(urlText)} target="_blank" rel="noopener noreferrer">
+          {urlText}
+        </a>,
+      );
+    }
+
+    if (trailingText) {
+      nodes.push(trailingText);
+    }
+
+    cursor = start + rawUrl.length;
+  }
+
+  if (cursor < text.length) {
+    nodes.push(text.slice(cursor));
+  }
+
+  return nodes.length > 0 ? nodes : [text];
+}
+
+function splitTrailingUrlPunctuation(value: string): { urlText: string; trailingText: string } {
+  let urlText = value;
+  let trailingText = '';
+
+  while (urlText.length > 0 && shouldTrimTrailingUrlCharacter(urlText)) {
+    trailingText = urlText.at(-1) + trailingText;
+    urlText = urlText.slice(0, -1);
+  }
+
+  return { urlText, trailingText };
+}
+
+function shouldTrimTrailingUrlCharacter(value: string): boolean {
+  const lastCharacter = value.at(-1);
+
+  if (!lastCharacter) {
+    return false;
+  }
+
+  if (/[.,!?;:，。、]/.test(lastCharacter)) {
+    return true;
+  }
+
+  if (lastCharacter === ')') {
+    return countCharacters(value, ')') > countCharacters(value, '(');
+  }
+
+  if (lastCharacter === ']') {
+    return countCharacters(value, ']') > countCharacters(value, '[');
+  }
+
+  if (lastCharacter === '）') {
+    return countCharacters(value, '）') > countCharacters(value, '（');
+  }
+
+  return false;
+}
+
+function countCharacters(value: string, character: string): number {
+  return Array.from(value).filter((item) => item === character).length;
+}
+
+function buildLinkHref(urlText: string): string {
+  return /^https?:\/\//i.test(urlText) ? urlText : `https://${urlText}`;
 }

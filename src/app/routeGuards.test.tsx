@@ -21,7 +21,7 @@ describe('participant route guards', () => {
     });
 
     expect(screen.getByText('설문을 찾을 수 없습니다.')).toBeInTheDocument();
-    expect(screen.queryByText('Google 로그인')).not.toBeInTheDocument();
+    expect(screen.queryByText('공간의 목소리를 더 선명하게 모읍니다.')).not.toBeInTheDocument();
   });
 
   it('routes unauthenticated participants to login', async () => {
@@ -30,7 +30,7 @@ describe('participant route guards', () => {
       controller: createFakeParticipantApiController({ session: null }),
     });
 
-    await waitFor(() => expect(screen.getByText('Google 로그인')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Google로 계속하기' })).toBeInTheDocument());
   });
 
   it('routes the public survey entry to login even when a session exists', async () => {
@@ -39,7 +39,7 @@ describe('participant route guards', () => {
       controller: createFakeParticipantApiController({ session: { userId: 'user-1', email: 'student@example.com' } }),
     });
 
-    await waitFor(() => expect(screen.getByText('Google 로그인')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Google로 계속하기' })).toBeInTheDocument());
     expect(screen.queryByText('설문 안내')).not.toBeInTheDocument();
   });
 

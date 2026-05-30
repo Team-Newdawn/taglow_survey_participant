@@ -137,6 +137,7 @@ describe('SurveySectionPage', () => {
 
     expect(await screen.findByText('제출 전 검토')).toBeInTheDocument();
   });
+
   it('scrolls the section body to the top when moving to the next section', async () => {
     const survey = buildTwoScaleSectionSurvey();
 
@@ -199,6 +200,7 @@ function buildScaleGroupSurvey() {
     ],
   };
 }
+
 function buildTwoScaleSectionSurvey() {
   const facilitySection = publishedSurveyFixture.sections[1];
   const baseScaleQuestion = facilitySection.questions[0];
