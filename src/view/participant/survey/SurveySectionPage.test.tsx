@@ -127,7 +127,6 @@ describe('SurveySectionPage', () => {
       expect(useParticipantDraftStore.getState().values['question-light-off-time']).toEqual({ scoreValue: 4 });
     });
 
-    await userEvent.click(screen.getByRole('button', { name: /소등 여부/ }));
     await userEvent.click(screen.getByRole('button', { name: '5' }));
 
     await waitFor(() => {
@@ -137,6 +136,34 @@ describe('SurveySectionPage', () => {
     await userEvent.click(screen.getByRole('button', { name: '검토하기' }));
 
     expect(await screen.findByText('제출 전 검토')).toBeInTheDocument();
+  });
+
+  it('scrolls the section body to the top when moving to the next section', async () => {
+    const survey = buildTwoScaleSectionSurvey();
+
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/sections/facility',
+      controller: createFakeParticipantApiController({ survey }),
+    });
+
+    expect(await screen.findByText('세탁실 만족도는 어떤가요?')).toBeInTheDocument();
+
+    const body = document.querySelector<HTMLDivElement>('.survey-section-page__body');
+    expect(body).toBeTruthy();
+    if (!body) {
+      return;
+    }
+
+    body.scrollTop = 240;
+
+    await userEvent.click(screen.getByRole('button', { name: '5' }));
+    await userEvent.click(screen.getByRole('button', { name: '다음' }));
+
+    expect(await screen.findByText('두 번째 섹션 만족도는 어떤가요?')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(body.scrollTop).toBe(0);
+    });
   });
 });
 
@@ -167,6 +194,49 @@ function buildScaleGroupSurvey() {
             title: { ko: `${displayGroup} [(2) 소등 여부]` },
             orderIndex: 1,
             config: { ...baseScaleQuestion.config, displayGroup },
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function buildTwoScaleSectionSurvey() {
+  const facilitySection = publishedSurveyFixture.sections[1];
+  const baseScaleQuestion = facilitySection.questions[0];
+
+  return {
+    ...publishedSurveyFixture,
+    sections: [
+      {
+        ...facilitySection,
+        id: 'section-first-scale',
+        sectionKey: 'facility',
+        title: { ko: '첫 번째 섹션' },
+        orderIndex: 0,
+        questions: [
+          {
+            ...baseScaleQuestion,
+            id: 'question-first-scale',
+            sectionId: 'section-first-scale',
+            questionKey: 'first_scale',
+            title: { ko: '세탁실 만족도는 어떤가요?' },
+          },
+        ],
+      },
+      {
+        ...facilitySection,
+        id: 'section-second-scale',
+        sectionKey: 'facility-next',
+        title: { ko: '두 번째 섹션' },
+        orderIndex: 1,
+        questions: [
+          {
+            ...baseScaleQuestion,
+            id: 'question-second-scale',
+            sectionId: 'section-second-scale',
+            questionKey: 'second_scale',
+            title: { ko: '두 번째 섹션 만족도는 어떤가요?' },
           },
         ],
       },

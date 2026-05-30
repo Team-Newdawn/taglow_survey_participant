@@ -8,7 +8,7 @@
 공개 URL/QR 접속
 → 설문 상태 확인
 → Google 로그인
-→ @handong.ac.kr 도메인 검증
+→ Supabase 세션 확인
 → 중복 제출 여부 확인
 → 설문 안내 화면
 → 섹션별 질문 응답
@@ -268,17 +268,15 @@ src/
 1. publicSlug로 survey 조회
 2. survey.status = published 확인
 3. Google 로그인 확인
-4. @handong.ac.kr 도메인 확인
-5. responses unique index 기준 중복 제출 여부 확인
+4. responses unique index 기준 중복 제출 여부 확인
 ```
 
-단, 현재 Supabase RLS는 non-Handong 사용자의 published survey 조회 자체를 숨길 수 있다. 세션이 이미 있고 도메인이 허용되지 않은 경우에는 survey query error를 `/not-found`보다 `/access-denied`로 우선 분기한다.
+중복 제출 검사는 survey와 session이 모두 확인된 뒤 실행한다. 로그인 전 공개/미발견 경로에서는 participant user id가 없으므로 duplicate query를 실행하지 않는다.
 
 분기:
 
 ```text
 비로그인 → /survey/:publicSlug/login
-handong 계정 아님 → /survey/:publicSlug/access-denied
 설문 없음 → /survey/:publicSlug/not-found
 closed/archived → /survey/:publicSlug/closed
 이미 제출함 → /survey/:publicSlug/already-submitted
@@ -304,7 +302,7 @@ closed/archived → /survey/:publicSlug/closed
 
 권한 검증:
 - auth.users via Supabase Auth
-- RLS helper is_handong_user()
+- RLS policies for authenticated participant ownership
 ```
 
 관리자 권한 테이블 `admin_members`는 참여자 페이지에서 직접 사용하지 않는다.
@@ -353,7 +351,6 @@ participant submit RPC: submit_survey_response is not deployed
 - 참여자용 공개 bundle RPC/Edge Function은 없으므로 Supabase gateway는 PostgREST embedded select 한 번으로 surveys + survey_sections + questions + survey_assets를 조합한다.
 - 현재 제출은 submit_survey_response RPC가 아니라 responses insert + answers bulk insert를 사용한다.
 - 정식 런칭 전 transactional submit RPC를 추가하면 SupabaseParticipantApiGateway에 optional submitSurveyResponse를 다시 연결한다.
-- private.is_handong_user() RLS helper는 auth.jwt()->>'email'이 @handong.ac.kr인지 확인한다.
 - responses RLS는 participant_email lower-case가 auth email과 같은지 검사하므로 client payload는 lower-case email을 저장한다.
 ```
 
@@ -436,11 +433,11 @@ analytics indexes:
 ```text
 surveys:
 - authenticated admin can CRUD own surveys
-- authenticated @handong.ac.kr users can select published surveys
+- authenticated users can select published surveys
 
 survey_sections / questions / survey_assets:
 - authenticated admin can manage own survey structure
-- authenticated @handong.ac.kr users can select rows for published surveys
+- authenticated users can select rows for published surveys
 - insert/update/delete on published/closed/archived survey structure is blocked by trigger
 
 responses:
@@ -457,7 +454,7 @@ answers:
 storage.objects:
 - bucket survey-assets is private
 - admin can manage survey asset objects
-- authenticated @handong.ac.kr users can read objects connected to published survey_assets
+- authenticated users can read objects connected to published survey_assets
 ```
 
 현재 분석 함수는 관리자/분석 화면용이며 참여자 View에서 직접 호출하지 않는다.
@@ -500,7 +497,7 @@ closed_at
 ```text
 status = published
 public_slug = route param
-@handong.ac.kr authenticated user
+authenticated user
 ```
 
 ### `survey_sections`
@@ -683,6 +680,37 @@ export type PublicSurveySection = Readonly<{
   orderIndex: number;
   sectionType: string;
   questions: PublicQuestion[];
+}>;
+
+export type QuestionType =
+  | 'profile'
+  | 'experience'
+  | 'scale'
+  | 'single_choice'
+  | 'multi_select'
+  | 'ranking'
+  | 'text'
+  | 'image_tag'
+  | 'participant_image_tag'
+  | 'attention_check';
+
+export type QuestionConfig = Readonly<{
+  options?: QuestionOption[];
+  assetId?: string;
+  displayGroup?: string;
+  maxTags?: number;
+  minSelections?: number;
+  maxSelections?: number;
+  lowScoreThreshold?: number;
+  textMode?: 'short' | 'long' | 'select_text';
+  multiline?: boolean;
+  maxLength?: number;
+  opinionTypes?: QuestionOption[];
+  opinionOptions?: QuestionOption[];
+  categoryOptions?: QuestionOption[];
+  branch?: BranchConfig;
+  visibility?: BranchConfig;
+  [key: string]: unknown;
 }>;
 
 export type PublicQuestion = Readonly<{
@@ -951,20 +979,119 @@ export type SurveyDraft = Readonly<{
 
 ## 13. 질문 렌더링 설계
 
-`QuestionRenderer`는 `question.questionType`에 따라 컴포넌트를 선택한다.
+섹션 렌더링은 `SurveySectionPage`가 소유하고, 개별 문항 렌더링은 `QuestionRenderer`와 질문 컴포넌트가 소유한다. View는 Supabase SDK나 raw row를 직접 알지 않고, `usePublicSurveyQuery`, `useParticipantSessionQuery`, draft store, React Hook Form 값만 사용한다.
+
+### 13.0 Section Rendering Pipeline
+
+```text
+route /survey/:publicSlug/sections/:sectionKey
+→ usePublicSurveyQuery(publicSlug)
+→ useParticipantSessionQuery()
+→ 현재 sectionKey에 해당하는 PublicSurveySection 선택
+→ React Hook Form defaultValues = participantDraftStore.values
+→ section.questions를 branchEvaluator.shouldShowQuestion으로 필터링
+→ buildQuestionScreens(visibleQuestions)
+→ 현재 questionScreenIndex의 questions 선택
+→ buildQuestionRenderBlocks(currentQuestionScreen)
+→ QuestionRenderer 또는 grouped question component 렌더링
+```
+
+질문 화면 분할 규칙:
+
+- `image_tag`와 `participant_image_tag`는 각각 하나의 독립 question screen이 된다.
+- 연속된 non-image 질문은 같은 question screen에 함께 렌더링할 수 있다.
+- 이미지 태깅 전후의 non-image 질문은 이미지 태깅 화면과 섞지 않는다.
+- `sectionKey`가 바뀌면 `questionScreenIndex`와 `missingQuestionIds`를 초기화한다.
+
+이동 규칙:
+
+- `goNext`는 현재 question screen에 포함된 required question만 검사한다.
+- 누락이 있으면 `missingQuestionIds`를 설정하고 이동하지 않는다.
+- 누락이 없고 다음 question screen이 있으면 draft 저장 후 `questionScreenIndex + 1`.
+- 현재 section의 마지막 question screen이면 section completed 상태를 표시하고 draft 저장 후 다음 section 또는 review로 이동한다.
+- `goPrevious`는 draft 저장 후 이전 question screen, 이전 section, intro 순서로 이동한다.
+
+### 13.0.1 Render Block Grouping
+
+`questionRenderBlocks.ts`는 화면에 보이는 질문 단위를 만든다.
+
+```ts
+type QuestionRenderBlock =
+  | { type: 'question'; question: PublicQuestion }
+  | { type: 'scale_group'; id: string; groupTitle: string; questions: PublicQuestion[] }
+  | { type: 'multi_select_group'; id: string; groupTitle: string; questions: PublicQuestion[] };
+```
+
+그룹화 규칙:
+
+- `scale` 질문이 연속되어 있고 같은 non-empty `config.displayGroup` 값을 가지면 `scale_group` 후보가 된다.
+- `multi_select` 질문이 연속되어 있고 같은 non-empty `config.displayGroup` 값을 가지면 `multi_select_group` 후보가 된다.
+- 같은 그룹 후보가 2개 이상일 때만 그룹 block으로 만든다.
+- 그룹이 아닌 질문은 일반 `question` block으로 유지한다.
+- 렌더링 번호는 `visibleQuestions` 전체에 대해 만든 render block 순서를 기준으로 부여한다.
+- 그룹 block은 데이터상 여러 질문이어도 참여자 화면에서는 하나의 번호를 가진다.
+
+### 13.0.2 QuestionRenderer Mapping
 
 ```text
 profile → ProfileQuestion
+experience → ExperienceQuestion
 scale → ScaleQuestion
 single_choice → SingleChoiceQuestion
 multi_select → MultiSelectQuestion
 ranking → RankingQuestion
 text → TextQuestion
 image_tag → ImageTagQuestion
+participant_image_tag → ParticipantImageTagQuestion
 attention_check → AttentionCheckQuestion
+unknown → TextQuestion fallback
 ```
 
+공통 props:
+
+```ts
+type QuestionComponentProps<TValue = unknown> = {
+  question: PublicQuestion;
+  assets: SurveyAsset[];
+  locale: Locale;
+  fallbackLocale: Locale;
+  value: TValue;
+  error?: string;
+  number?: number;
+  onChange: (value: TValue) => void;
+};
+```
+
+### 13.0.3 QuestionShell Contract
+
+대부분의 개별 문항은 `QuestionShell` 안에서 렌더링한다.
+
+- `section.question-shell` 역할의 surface를 제공한다.
+- `aria-labelledby`로 질문 제목을 연결한다.
+- 렌더링 번호가 있으면 제목 앞에 `n.`을 표시한다.
+- required question은 시각적으로 `*`를 붙이고 `aria-label="필수"`를 포함한다.
+- description이 있으면 localized text로 표시한다.
+- `error`가 있으면 문항 하단에 표시한다.
+- 그룹 질문은 `QuestionShell`을 직접 쓰지 않고 같은 접근성/타이포그래피 계약을 자체 구현한다.
+
 ### 13.1 ScaleQuestion
+
+값 shape:
+
+```ts
+type ScaleValue = {
+  scoreValue?: number;
+  lowScoreReason?: string;
+  lowScoreText?: string;
+};
+```
+
+렌더링:
+
+- 1~5 고정 점수 버튼을 렌더링한다.
+- 선택 점수가 `config.lowScoreThreshold` 이하이면 `LowScoreFollowUp`을 표시한다.
+- threshold 기본값은 2다.
+- threshold를 초과하는 점수를 선택하면 낮은 점수 후속 값은 제거한다.
 
 저장 매핑:
 
@@ -972,16 +1099,171 @@ attention_check → AttentionCheckQuestion
 answer_type = scale
 metric_type = question.metricType
 score_value = 선택한 점수
+value_json.low_score_reason = 낮은 점수 이유
+value_json.low_score_text = 낮은 점수 설명
 ```
 
-### 13.2 ImageTagQuestion
+### 13.1.1 ScaleQuestionGroup
+
+`scale_group` block은 `ScaleQuestionGroup`으로 렌더링한다.
+
+렌더링:
+
+- 그룹 제목, 렌더링 번호, required star, `answeredCount/questions.length`를 표시한다.
+- 각 question은 accordion summary로 표시한다.
+- summary에는 localized display label, `미응답` 또는 `n점`, toggle을 표시한다.
+- 누락 required question이 있으면 해당 item panel을 자동으로 펼친다.
+- panel 안에서는 `ScaleQuestionBody`를 재사용한다.
+
+display label 우선순위:
+
+```text
+config.displayLabelKo/displayLabelEn
+→ fallback locale display label
+→ config.displayLabel
+→ title의 bracket label
+→ question title
+```
+
+### 13.2 SingleChoiceQuestion
+
+값 shape:
+
+```ts
+type SingleChoiceValue = string;
+```
+
+렌더링:
+
+- `role="radiogroup"`와 native `input type="radio"`를 사용한다.
+- option label은 `getDisplayOptions`로 localized label을 표시한다.
+- 저장값은 option label이 아니라 option value다.
+
+저장 매핑:
+
+```text
+answer_type = single_choice
+choice_value = 선택한 option.value
+```
+
+### 13.3 MultiSelectQuestion
+
+값 shape:
+
+```ts
+type MultiSelectValue = {
+  selectedOptions?: string[];
+  otherText?: string;
+};
+```
+
+렌더링:
+
+- native `input type="checkbox"`를 사용한다.
+- `validation.minSelections`, `validation.maxSelections`, `config.minSelections`, `config.maxSelections`를 읽는다.
+- 현재 선택 개수와 min/max 안내를 표시한다.
+- max 선택 수에 도달하면 미선택 option은 disabled 처리한다.
+- `other`를 선택하면 `otherText` input을 표시한다.
+
+저장 매핑:
+
+```json
+{
+  "selectedOptions": ["05_07", "07_09"],
+  "otherText": null
+}
+```
+
+### 13.3.1 MultiSelectQuestionGroup
+
+`multi_select_group` block은 `MultiSelectQuestionGroup`으로 렌더링한다.
+
+렌더링:
+
+- 같은 `displayGroup`의 연속 질문 option을 화면상 하나의 checkbox list로 flatten한다.
+- 내부 값은 각 원본 question id별로 유지한다.
+- selected count는 그룹 전체 기준으로 계산한다.
+- min/max selection은 그룹 질문들의 validation/config 중 첫 유효 값을 사용한다.
+- required group은 그룹 전체 선택 수가 minSelections보다 작으면 누락으로 본다.
+- `other` option이 선택된 question에만 `otherText`를 기록한다.
+
+### 13.4 TextQuestion
+
+값 shape:
+
+```ts
+type TextValue = {
+  topicValue?: string;
+  spaceValue?: string;
+  opinionType?: string;
+  textValue?: string;
+};
+```
+
+렌더링 모드:
+
+- plain text: category selector 없이 input/textarea만 렌더링한다.
+- short text: `config.textMode === 'short'` 또는 `config.multiline === false`이면 한 줄 input을 렌더링한다.
+- long text: 기본값은 textarea다.
+- select text: `config.requiresOpinionType === true`, `config.textMode === 'select_text'`, 또는 opinion option 배열이 있으면 opinion radio group을 먼저 렌더링한다.
+
+opinion option source 우선순위:
+
+```text
+config.opinionTypes
+→ config.textCategories
+→ config.categoryOptions
+→ config.opinionOptions
+→ config.options
+→ default 불편/개선/칭찬/문의/기타
+```
+
+저장 매핑:
+
+```text
+answer_type = text
+text_value = textValue
+value_json.topic_value = topicValue
+value_json.space_value = spaceValue
+value_json.opinion_type = opinionType
+```
+
+### 13.5 RankingQuestion
+
+값 shape:
+
+```ts
+type RankingValue = {
+  rankedOptions?: Array<{ rank: number; optionValue: string }>;
+};
+```
+
+렌더링:
+
+- 드래그가 아니라 tap-to-rank 방식이다.
+- 선택하지 않은 option은 `-`, 선택된 option은 `n순위`로 표시한다.
+- 이미 선택된 option을 다시 누르면 제거하고 rank를 재정렬한다.
+- `validation.maxSelections` 또는 `config.maxSelections`를 max rank로 사용하고 기본값은 3이다.
+
+저장 매핑:
+
+```json
+{
+  "rankedOptions": [
+    { "rank": 1, "optionValue": "room_assignment" },
+    { "rank": 2, "optionValue": "rc_event" }
+  ]
+}
+```
+
+### 13.6 ImageTagQuestion
 
 태깅 플로우:
 
 ```text
 이미지 로드
 → 이미지 표시 영역 측정
-→ 사용자 클릭 좌표 수집
+→ 사용자가 스티커를 드래그해 drop한 좌표 수집
 → x_ratio/y_ratio 계산
 → tag_type 선택
 → severity 선택
@@ -1008,28 +1290,89 @@ severity = selectedSeverity
 text_value = comment
 ```
 
-### 13.3 MultiSelectQuestion
+UI state:
 
-저장 매핑:
+```ts
+type ImageTagValue = {
+  points?: ImageTagPoint[];
+};
 
-```json
-{
-  "selectedOptions": ["05_07", "07_09"],
-  "otherText": null
-}
+type ImageTagEditor = {
+  index: number | null;
+  point: ImageTagPoint;
+  error?: string;
+};
 ```
 
-### 13.4 RankingQuestion
+구현 규칙:
+
+- asset은 `question.config.assetId`와 일치하는 asset을 먼저 사용하고, 없으면 question/section asset fallback을 사용한다.
+- asset URL은 `useAssetUrlQuery`로 signed URL을 받아 렌더링한다.
+- 신규 위치는 52px drag source를 pointer capture로 드래그해 이미지 위에 drop한다.
+- drop 좌표가 이미지 rect 밖이면 editor를 열지 않는다.
+- drop 좌표가 이미지 rect 안이면 `calculateImageRatio`로 0..1 비율을 계산하고 editor를 연다.
+- 기존 pin은 `xRatio * 100%`, `yRatio * 100%`로 재렌더링한다.
+- 첫 태그 전에는 `useStickerHintMotion`으로 원래 스티커 위치에서 이미지 중심으로 이동하는 hint를 표시한다.
+- drag 중, editor open 중, 또는 points가 하나 이상이면 hint를 숨긴다.
+- 저장 시 tag text가 비어 있으면 `이유를 짧게 적어주세요.` 오류를 표시한다.
+
+### 13.7 ParticipantImageTagQuestion
+
+참여자 업로드 이미지 위에 위치를 표시하는 문항이다.
+
+값 shape:
+
+```ts
+type ParticipantImageTagValue = {
+  image?: {
+    storageBucket: string;
+    storagePath: string;
+    signedUrl?: string;
+    metadata?: Record<string, unknown>;
+  };
+  points?: ParticipantImageTagPoint[];
+};
+```
+
+렌더링/저장:
+
+- file input은 styled label 안에 숨긴다.
+- 기본 accept는 `image/*`이고 `config.acceptedMimeTypes`로 제한할 수 있다.
+- 기본 max file size는 10MB이고 `config.maxFileSizeMb`로 변경할 수 있다.
+- 파일 검증 실패 시 즉시 participant-friendly error를 표시한다.
+- 업로드 성공 시 image metadata를 form value에 저장하고 기존 points는 비운다.
+- 업로드된 이미지는 asset-like object로 변환해 signed URL을 조회한다.
+- 위치 선택 UX는 `ImageTagQuestion`과 동일한 drag sticker/editor 패턴을 사용한다.
+- `validation.requiredTagText` 또는 `config.requireText`가 true일 때만 tag text를 필수로 본다.
 
 저장 매핑:
 
-```json
-{
-  "rankedOptions": [
-    { "rank": 1, "optionValue": "room_assignment" },
-    { "rank": 2, "optionValue": "rc_event" }
-  ]
-}
+```text
+answer_type = participant_image_tag
+x_ratio/y_ratio = point ratio
+tag_type = selectedTagType
+severity = selectedSeverity
+text_value = comment when present
+value_json.participantImage.storageBucket = uploaded storage bucket
+value_json.participantImage.storagePath = uploaded storage path
+value_json.tagIndex = 1-based point index
+```
+
+### 13.8 AttentionCheckQuestion
+
+렌더링:
+
+- configured options를 button list로 렌더링한다.
+- 제출 매핑 시 `validateAttentionCheck`로 expected/actual/passed를 `value_json`에 저장한다.
+
+저장 매핑:
+
+```text
+answer_type = attention_check
+choice_value 또는 score_value = actual value
+value_json.expectedValue = expected value
+value_json.actualValue = actual value
+value_json.passed = boolean
 ```
 
 ---
@@ -1047,6 +1390,7 @@ answerSchema.ts
 - rankingAnswerSchema
 - textAnswerSchema
 - imageTagAnswerSchema
+- participantImageTagAnswerSchema
 - attentionCheckAnswerSchema
 ```
 
@@ -1059,7 +1403,9 @@ answerSchema.ts
 - ranking 중복 선택 방지
 - image_tag 최대 태그 수
 - image_tag 좌표 0~1 범위
+- participant_image_tag 업로드 이미지 존재 및 좌표 0~1 범위
 - text 최소 글자 수
+- select_text 의견 유형 필수 여부
 - attention_check 기대값 일치 여부
 ```
 
@@ -1069,6 +1415,7 @@ answerSchema.ts
 - 모든 required 질문 통과
 - 기본 정보 컬럼 추출 가능
 - image_tag answer의 asset_id 존재
+- participant_image_tag answer의 participantImage storage 정보 존재
 - attention_check 실패 응답 표시 또는 제출 차단 정책 적용
 - duplicate submission query 통과
 ```
@@ -1154,7 +1501,6 @@ where status = 'submitted';
 
 ```text
 - authenticated user
-- email domain = @handong.ac.kr
 - survey.status = published
 ```
 
@@ -1174,7 +1520,7 @@ answers:
 - 자기 response에 속한 answer만 insert/select 가능
 ```
 
-실제 RLS는 non-Handong 사용자의 survey select도 차단할 수 있다. 따라서 View guard는 세션이 이미 있고 email domain이 `@handong.ac.kr`이 아니면 survey query 실패를 not-found로 확정하기 전에 `/access-denied`로 보낸다.
+View guard는 survey 조회, published 상태, session 존재, duplicate submission 순서로 분기한다. `/access-denied`는 직접 접근 가능한 시스템 페이지로 유지하되, 현재 참여자 정책의 기본 차단 조건은 survey 상태와 중복 제출이다.
 
 ### 17.3 브라우저에 저장하지 말아야 할 것
 
@@ -1219,7 +1565,6 @@ private bucket을 사용하는 경우 signed URL을 사용한다.
 ```ts
 export type ParticipantApiErrorCode =
   | 'UNAUTHENTICATED'
-  | 'NOT_HANDONG_EMAIL'
   | 'SURVEY_NOT_FOUND'
   | 'SURVEY_CLOSED'
   | 'ALREADY_SUBMITTED'
@@ -1251,12 +1596,16 @@ ParticipantPayloadMapper
 - form values → response payload 변환
 - form values → answer payload 배열 변환
 - image_tag value → x_ratio/y_ratio payload 변환
+- participant_image_tag value → participantImage + x_ratio/y_ratio payload 변환
 
 Validation
 - required question validation
 - multi_select min/max validation
+- multi_select displayGroup required validation
 - ranking duplicate validation
 - image_tag coordinate validation
+- participant_image_tag upload/coordinate validation
+- text short/select_text validation
 - attention_check validation
 
 Draft
@@ -1265,15 +1614,32 @@ Draft
 - schemaVersion mismatch 처리
 ```
 
+```text
+Question Rendering Utils
+- buildQuestionScreens: image_tag/participant_image_tag 독립 screen 분리
+- buildQuestionScreens: non-image 질문은 연속 screen으로 병합
+- buildQuestionRenderBlocks: scale displayGroup 그룹화
+- buildQuestionRenderBlocks: multi_select displayGroup 그룹화
+- getQuestionRenderBlockId: group/question id 안정성
+```
+
 ## 20.2 Component Test
 
 ```text
 - SurveyIntroPage 렌더링
-- SectionNavigator 진행률 표시
+- SurveySectionPage section header/하단 이동 표시
+- SurveySectionPage 현재 screen required 누락 시 이동 차단
+- SurveySectionPage image_tag screen 분리
 - ScaleQuestion 점수 선택
+- ScaleQuestionGroup accordion/answered count/missing expansion
+- SingleChoiceQuestion radio 선택
 - MultiSelectQuestion 선택 개수 제한
+- MultiSelectQuestionGroup checkbox flattening/min/max/otherText
 - RankingQuestion 중복 선택 방지
+- TextQuestion plain text/short text/select_text 렌더링
 - ImageTagQuestion 좌표 표시
+- ImageTagQuestion drag sticker/drop/editor/save/delete
+- ParticipantImageTagQuestion upload validation/위치 표시
 - DraftRestoreBanner 복구/삭제
 - SurveyReviewPage 누락 응답 표시
 ```
@@ -1285,7 +1651,7 @@ fakeParticipantApiController를 사용한다.
 ```text
 - publicSlug로 survey 조회
 - 로그인 전 login page 표시
-- handong email 통과
+- Google session이 있으면 참여 가능
 - already submitted이면 complete/blocked page 표시
 - 섹션별 입력 후 draft 저장
 - draft 복구 후 review 이동
@@ -1315,7 +1681,7 @@ Playwright 기준:
 Supabase local 또는 staging project에서 검증한다.
 
 ```text
-- handong 계정이 아닌 사용자는 published survey select 불가
+- 인증되지 않은 사용자는 보호된 survey response 영역 접근 불가
 - participant는 draft survey select 불가
 - participant는 다른 사용자의 response select 불가
 - participant는 다른 사용자의 response_id로 answers insert 불가
@@ -1340,7 +1706,7 @@ Supabase local 또는 staging project에서 검증한다.
 
 ```text
 - Supabase Google Auth 연결
-- @handong.ac.kr 클라이언트 검증
+- session hydration 후 intro 이후 route 접근 허용
 - access denied / closed / not found routing
 - duplicate submission query
 ```
@@ -1349,9 +1715,10 @@ Supabase local 또는 staging project에서 검증한다.
 
 ```text
 - QuestionRenderer
-- scale/single/multi/ranking/text/image_tag 컴포넌트
-- section navigation
-- validation
+- buildQuestionScreens / buildQuestionRenderBlocks
+- scale/single/multi/ranking/text/image_tag/participant_image_tag 컴포넌트
+- scale_group / multi_select_group 렌더링
+- section navigation과 current screen validation
 ```
 
 ### Phase 4. Draft Cache

@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { PublicQuestion } from '../../../../../api/participant';
@@ -8,17 +9,7 @@ import { ScaleQuestionGroup } from '../ScaleQuestionGroup';
 
 describe('ScaleQuestionGroup', () => {
   it('renders one group title and collapsed item rows', () => {
-    render(
-      <ScaleQuestionGroup
-        groupTitle="소등제도 만족도"
-        questions={[buildGroupQuestion('scale-1', 0, '소등시간'), buildGroupQuestion('scale-2', 1, '소등 여부')]}
-        locale="ko"
-        fallbackLocale="ko"
-        values={{}}
-        missingQuestionIds={[]}
-        onChange={vi.fn()}
-      />,
-    );
+    render(<ControlledScaleQuestionGroup />);
 
     expect(screen.getByRole('heading', { name: /소등제도 만족도/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /소등시간/ })).toBeInTheDocument();
@@ -119,6 +110,33 @@ describe('ScaleQuestionGroup', () => {
     expect(onChange).toHaveBeenCalledWith('scale-2', { scoreValue: 5 });
   });
 
+  it('opens the next scale row after selecting a score that does not need follow-up', async () => {
+    const user = userEvent.setup();
+
+    render(<ControlledScaleQuestionGroup />);
+
+    await user.click(screen.getByRole('button', { name: /소등시간/ }));
+    await user.click(screen.getByRole('button', { name: '3' }));
+
+    expect(screen.getByRole('button', { name: /소등시간/ })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: /소등 여부/ })).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('keeps the current scale row open after selecting a low score that needs follow-up', async () => {
+    const user = userEvent.setup();
+
+    render(<ControlledScaleQuestionGroup />);
+
+    await user.click(screen.getByRole('button', { name: /소등시간/ }));
+    await user.click(screen.getByRole('button', { name: '2' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /소등시간/ })).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByRole('button', { name: /소등 여부/ })).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.getByText('낮은 점수를 준 이유를 선택해주세요.')).toBeInTheDocument();
+    });
+  });
+
   it('does not show low-score follow-up for score 3', async () => {
     const user = userEvent.setup();
 
@@ -177,6 +195,22 @@ describe('ScaleQuestionGroup', () => {
     expect(screen.getByText('필수 문항입니다.')).toBeInTheDocument();
   });
 });
+
+function ControlledScaleQuestionGroup() {
+  const [values, setValues] = useState<Record<string, unknown>>({});
+
+  return (
+    <ScaleQuestionGroup
+      groupTitle="소등제도 만족도"
+      questions={[buildGroupQuestion('scale-1', 0, '소등시간'), buildGroupQuestion('scale-2', 1, '소등 여부')]}
+      locale="ko"
+      fallbackLocale="ko"
+      values={values}
+      missingQuestionIds={[]}
+      onChange={(questionId, value) => setValues((current) => ({ ...current, [questionId]: value }))}
+    />
+  );
+}
 
 function buildGroupQuestion(id: string, orderIndex: number, itemLabel: string): PublicQuestion {
   const question = publishedSurveyFixture.sections[1].questions[0];

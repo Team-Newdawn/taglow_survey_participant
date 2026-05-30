@@ -13,6 +13,7 @@ type ScaleQuestionBodyProps = {
   value: ScaleValue;
   threshold: number;
   onChange: (value: ScaleValue) => void;
+  onScoreSelect?: (score: number, value: ScaleValue) => void;
 };
 
 export function ScaleQuestion(props: QuestionComponentProps<unknown>) {
@@ -26,7 +27,13 @@ export function ScaleQuestion(props: QuestionComponentProps<unknown>) {
   );
 }
 
-export function ScaleQuestionBody({ value, threshold, onChange }: ScaleQuestionBodyProps) {
+export function ScaleQuestionBody({ value, threshold, onChange, onScoreSelect }: ScaleQuestionBodyProps) {
+  const selectScore = (score: number) => {
+    const nextValue = createScaleValueForScore(value, score, threshold);
+    onChange(nextValue);
+    onScoreSelect?.(score, nextValue);
+  };
+
   return (
     <div className="scale-question">
       <div className="scale-question__labels">
@@ -39,7 +46,7 @@ export function ScaleQuestionBody({ value, threshold, onChange }: ScaleQuestionB
             key={score}
             type="button"
             className={value.scoreValue === score ? 'is-selected' : ''}
-            onClick={() => onChange(createScaleValueForScore(value, score, threshold))}
+            onClick={() => selectScore(score)}
           >
             {score}
           </button>
