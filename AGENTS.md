@@ -53,6 +53,12 @@ Rules:
 - Supabase SDK belongs only inside `SupabaseParticipantApiGateway` and runtime wiring that remains hidden behind the gateway/controller.
 - Gateway replacement from Supabase to HTTP must not require view, hook, or controller rewrites.
 
+## Performance-First API/DB Work
+
+For any API, Supabase, database, query hook, gateway, controller, RPC, Edge Function, Storage, or RLS work, use the `taglow-performance-first` skill. Treat memory use, network round trips, database normalization, index/RLS cost, payload size, batching, caching, and API shape as first-class constraints before implementing.
+
+Prefer small payloads, stable query keys, explicit cache windows for read-mostly data, batched signed URL/status requests, and transactional RPCs for multi-table writes. When the change is broad or performance-sensitive, use a sub-agent if available for a read-only performance review before final handoff.
+
 ## Implementation Order
 
 Follow the TDD v2 phases unless the user narrows the task:

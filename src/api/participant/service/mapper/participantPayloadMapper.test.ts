@@ -169,4 +169,43 @@ describe('ParticipantPayloadMapper', () => {
       value_json: { note: 'ok' },
     });
   });
+
+  it('maps a submission command to the transactional RPC payload shape', () => {
+    const payload = mapper.toSubmitSurveyPayload({
+      surveyId: 'survey-1',
+      participantUserId: 'user-1',
+      participantEmail: 'Student@EXAMPLE.COM',
+      locale: 'en',
+      profile: {
+        department: 'CSEE',
+      },
+      answers: [
+        {
+          surveyId: 'survey-1',
+          sectionId: 'section-1',
+          questionId: 'question-1',
+          answerType: 'single_choice',
+          choiceValue: 'quiet',
+          valueJson: { choiceValue: 'quiet' },
+        },
+      ],
+      rawPayload: { question1: 'quiet' },
+    } satisfies SubmissionCommand);
+
+    expect(payload.response).toMatchObject({
+      survey_id: 'survey-1',
+      participant_user_id: 'user-1',
+      participant_email: 'student@example.com',
+      raw_payload: { question1: 'quiet' },
+    });
+    expect(payload.answers).toEqual([
+      expect.objectContaining({
+        survey_id: 'survey-1',
+        response_id: null,
+        answer_type: 'single_choice',
+        choice_value: 'quiet',
+      }),
+    ]);
+    expect(payload.rawPayload).toEqual({ question1: 'quiet' });
+  });
 });

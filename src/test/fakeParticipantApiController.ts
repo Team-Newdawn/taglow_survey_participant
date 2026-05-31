@@ -64,6 +64,10 @@ export function createFakeParticipantApiController(overrides: FakeControllerOver
         return { status: 'unauthenticated', survey };
       }
 
+      if (survey.status !== 'published') {
+        return { status: 'survey_closed', survey, session };
+      }
+
       if (duplicate.alreadySubmitted) {
         return { status: 'already_submitted', survey, session, submittedResponseId: duplicate.responseId };
       }
@@ -75,6 +79,9 @@ export function createFakeParticipantApiController(overrides: FakeControllerOver
     },
     async getAssetUrl(_asset: SurveyAsset) {
       return 'https://example.com/asset.jpg';
+    },
+    async getAssetUrls(assets: SurveyAsset[]) {
+      return Object.fromEntries(assets.map((asset) => [asset.id, 'https://example.com/asset.jpg']));
     },
     uploadQuestionImage,
     async submitSurvey(_command: SubmissionCommand) {

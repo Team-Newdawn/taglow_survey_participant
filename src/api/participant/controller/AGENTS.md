@@ -39,3 +39,10 @@ submitSurvey(command: SubmissionCommand): Promise<SubmissionResult>;
 - Do not import Supabase SDK here; inject a gateway from runtime.
 - Keep the public contract stable when changing gateway internals.
 - Controller should hide whether submit uses response+answers inserts or `submit_survey_response` RPC.
+
+## Performance Rules
+
+- Use the `taglow-performance-first` skill when controller orchestration changes data fetching or submission flow.
+- Prefer controller methods that expose bundled/batched use cases without leaking Supabase details upward.
+- Avoid orchestration that serializes independent requests unless ordering is required for correctness.
+- When a gateway exposes an optimized optional method, use it first and keep the old path as fallback.

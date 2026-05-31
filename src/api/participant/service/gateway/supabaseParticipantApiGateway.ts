@@ -8,12 +8,15 @@ import type {
   RawCreateAnswerPayload,
   RawCreateResponsePayload,
   RawDuplicateSubmissionResult,
+  RawParticipantSurveyAccessResult,
   RawParticipantQuestionImageUpload,
   RawPublicSurveyBundle,
   RawQuestionRow,
   RawResponse,
   RawSectionRow,
   RawSession,
+  RawSubmitSurveyPayload,
+  RawSubmitSurveyResult,
   RawSurveyRow,
 } from './participantApiGateway';
 
@@ -152,6 +155,28 @@ export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
     };
   }
 
+  async fetchParticipantSurveyAccess(publicSlug: string): Promise<RawParticipantSurveyAccessResult> {
+    const { data, error } = await this.supabase.rpc('get_participant_survey_access', { p_public_identifier: publicSlug });
+
+    if (error) {
+      throw toParticipantApiError(error, 'UNKNOWN');
+    }
+
+    const result = data as Partial<RawParticipantSurveyAccessResult> | null;
+    const status = normalizeParticipantSurveyAccessStatus(result?.status);
+
+    return {
+      status,
+      survey: result?.survey ?? null,
+      sections: Array.isArray(result?.sections) ? result.sections : [],
+      questions: Array.isArray(result?.questions) ? result.questions : [],
+      assets: Array.isArray(result?.assets) ? result.assets : [],
+      session: normalizeParticipantSurveyAccessSession(result?.session),
+      responseId: typeof result?.responseId === 'string' ? result.responseId : undefined,
+      submittedAt: typeof result?.submittedAt === 'string' ? result.submittedAt : undefined,
+    };
+  }
+
   async checkDuplicateSubmission(args: {
     surveyId: string;
     participantUserId: string;
@@ -179,7 +204,7 @@ export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
     const { data, error } = await this.supabase
       .from('responses')
       .insert(payload)
-      .select('*')
+      .select('id,submitted_at')
       .single();
 
     if (error) {
@@ -194,13 +219,31 @@ export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
       return [];
     }
 
-    const { data, error } = await this.supabase.from('answers').insert(payloads).select('*').returns<RawAnswer[]>();
+    const { error } = await this.supabase.from('answers').insert(payloads);
 
     if (error) {
       throw toParticipantApiError(error, 'SUBMISSION_FAILED');
     }
 
-    return data ?? [];
+    return [];
+  }
+
+  async submitSurveyResponse(payload: RawSubmitSurveyPayload): Promise<RawSubmitSurveyResult> {
+    const { data, error } = await this.supabase.rpc('submit_survey_response', { payload });
+
+    if (error) {
+      throw toParticipantApiError(error, 'SUBMISSION_FAILED');
+    }
+
+    const result = data as Partial<RawSubmitSurveyResult> | null;
+    if (!result?.responseId) {
+      throw new ParticipantApiError('SUBMISSION_FAILED', 'Survey submission did not return a response id.');
+    }
+
+    return {
+      responseId: result.responseId,
+      submittedAt: result.submittedAt,
+    };
   }
 
   async createSignedAssetUrl(args: { bucket: string; path: string }): Promise<string> {
@@ -211,6 +254,22 @@ export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
     }
 
     return data.signedUrl;
+  }
+
+  async createSignedAssetUrls(args: { bucket: string; paths: string[] }): Promise<Record<string, string>> {
+    if (args.paths.length === 0) {
+      return {};
+    }
+
+    const { data, error } = await this.supabase.storage.from(args.bucket).createSignedUrls(args.paths, 60 * 60);
+
+    if (error || !data) {
+      throw toParticipantApiError(error, 'ASSET_LOAD_FAILED');
+    }
+
+    return Object.fromEntries(
+      data.flatMap((item) => (item.path && item.signedUrl && !item.error ? [[item.path, item.signedUrl] as const] : [])),
+    );
   }
 
   async uploadQuestionImage(command: {
@@ -299,4 +358,32 @@ function getFileExtension(fileName: string): string {
   const extension = dotIndex >= 0 ? baseName.slice(dotIndex + 1).toLowerCase() : '';
 
   return /^[a-z0-9]+$/.test(extension) ? `.${extension}` : '';
+}
+
+function normalizeParticipantSurveyAccessStatus(
+  status: unknown,
+): RawParticipantSurveyAccessResult['status'] {
+  if (
+    status === 'allowed' ||
+    status === 'unauthenticated' ||
+    status === 'survey_not_found' ||
+    status === 'survey_closed' ||
+    status === 'already_submitted'
+  ) {
+    return status;
+  }
+
+  return 'survey_not_found';
+}
+
+function normalizeParticipantSurveyAccessSession(session: unknown): RawParticipantSurveyAccessResult['session'] {
+  if (!session || typeof session !== 'object') {
+    return undefined;
+  }
+
+  const record = session as Record<string, unknown>;
+  const userId = record.userId;
+  const email = record.email;
+
+  return typeof userId === 'string' && typeof email === 'string' ? { userId, email } : undefined;
 }

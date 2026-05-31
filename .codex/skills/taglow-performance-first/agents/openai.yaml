@@ -1,0 +1,7 @@
+interface:
+  display_name: "Taglow Performance First"
+  short_description: "Performance-first API and DB work"
+  default_prompt: "Use $taglow-performance-first to review this Taglow API or database change before implementation."
+
+policy:
+  allow_implicit_invocation: true

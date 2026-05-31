@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import type { PublicQuestion } from '../../../api/participant';
-import { useParticipantSessionQuery, usePublicSurveyQuery } from '../../../api/participant';
+import type { PublicQuestion, SurveyAsset } from '../../../api/participant';
+import { useAssetUrlsQuery, useParticipantSessionQuery, usePublicSurveyQuery } from '../../../api/participant';
 import type { SurveyDraft } from '../../../api/participant/service/draft/draftStorage';
 import { LocalStorageDraftStorage } from '../../../api/participant/service/draft/localStorageDraftStorage';
 import { shouldShowQuestion } from '../../../api/participant/service/validation/branchEvaluator';
@@ -140,14 +140,17 @@ export function SurveySectionPage() {
     };
   }, [saveDraft]);
 
+  const visibleQuestions = section?.questions.filter((question) => shouldShowQuestion({ question, values })) ?? [];
+  const questionScreens = buildQuestionScreens(visibleQuestions);
+  const activeQuestionScreenIndex = Math.min(questionScreenIndex, Math.max(questionScreens.length - 1, 0));
+  const currentQuestionScreen = questionScreens[activeQuestionScreenIndex] ?? [];
+  const currentScreenAssets = resolveQuestionAssets(survey?.assets ?? [], currentQuestionScreen);
+  const currentScreenAssetUrlsQuery = useAssetUrlsQuery(currentScreenAssets);
+
   if (!survey || !section) {
     return null;
   }
 
-  const visibleQuestions = section.questions.filter((question) => shouldShowQuestion({ question, values }));
-  const questionScreens = buildQuestionScreens(visibleQuestions);
-  const activeQuestionScreenIndex = Math.min(questionScreenIndex, Math.max(questionScreens.length - 1, 0));
-  const currentQuestionScreen = questionScreens[activeQuestionScreenIndex] ?? [];
   const hasPreviousQuestionScreen = activeQuestionScreenIndex > 0;
   const hasNextQuestionScreen = activeQuestionScreenIndex < questionScreens.length - 1;
   const visibleRenderBlocks = buildQuestionRenderBlocks(visibleQuestions);
@@ -276,6 +279,7 @@ export function SurveySectionPage() {
                 key={block.question.id}
                 question={block.question}
                 assets={survey.assets}
+                assetUrls={currentScreenAssetUrlsQuery.data ?? {}}
                 locale={displayLocale}
                 fallbackLocale={defaultLocale}
                 value={form.watch(block.question.id)}
@@ -324,6 +328,28 @@ function buildQuestionScreens(questions: PublicQuestion[]): PublicQuestion[][] {
 
 function isImageTagQuestion(question: PublicQuestion): boolean {
   return question.questionType === 'image_tag' || question.questionType === 'participant_image_tag';
+}
+
+function resolveQuestionAssets(assets: SurveyAsset[], questions: PublicQuestion[]): SurveyAsset[] {
+  const assetById = new Map(assets.map((asset) => [asset.id, asset] as const));
+  const resolved = new Map<string, SurveyAsset>();
+
+  for (const question of questions) {
+    if (question.questionType !== 'image_tag') {
+      continue;
+    }
+
+    const configAssetId = typeof question.config.assetId === 'string' ? question.config.assetId : undefined;
+    const asset =
+      (configAssetId ? assetById.get(configAssetId) : undefined) ??
+      assets.find((item) => item.questionId === question.id || item.sectionId === question.sectionId);
+
+    if (asset) {
+      resolved.set(asset.id, asset);
+    }
+  }
+
+  return Array.from(resolved.values());
 }
 
 function scrollElementToTop(element: HTMLElement | null): void {

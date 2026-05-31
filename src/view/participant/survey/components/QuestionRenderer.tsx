@@ -13,6 +13,7 @@ import { TextQuestion } from './TextQuestion';
 type QuestionRendererProps = {
   question: PublicQuestion;
   assets: SurveyAsset[];
+  assetUrls?: Record<string, string>;
   locale: Locale;
   fallbackLocale: Locale;
   value: unknown;
