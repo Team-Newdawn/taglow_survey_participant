@@ -26,6 +26,35 @@ describe('buildQuestionRenderBlocks', () => {
     expect(blocks[1]).toEqual({ type: 'question', question: multiQuestion });
   });
 
+  it('keeps the English group title when displayGroupEn is present', () => {
+    const questions = [
+      buildScaleQuestion('scale-1', 0, '침묵시간 만족도', 'Satisfaction with Silent Hours'),
+      buildScaleQuestion('scale-2', 1, '침묵시간 만족도', 'Satisfaction with Silent Hours'),
+    ];
+
+    const blocks = buildQuestionRenderBlocks(questions);
+
+    expect(blocks[0]).toMatchObject({
+      type: 'scale_group',
+      groupTitle: '침묵시간 만족도',
+      groupTitleEn: 'Satisfaction with Silent Hours',
+    });
+  });
+
+  it('uses the first English group title found in the grouped questions', () => {
+    const questions = [
+      buildScaleQuestion('scale-1', 0, '침묵시간 만족도'),
+      buildScaleQuestion('scale-2', 1, '침묵시간 만족도', 'Satisfaction with Silent Hours'),
+    ];
+
+    const blocks = buildQuestionRenderBlocks(questions);
+
+    expect(blocks[0]).toMatchObject({
+      type: 'scale_group',
+      groupTitleEn: 'Satisfaction with Silent Hours',
+    });
+  });
+
   it('does not group a single scale question even when displayGroup exists', () => {
     const question = buildScaleQuestion('scale-1', 0, '소등제도 만족도');
 
@@ -66,7 +95,7 @@ describe('buildQuestionRenderBlocks', () => {
   });
 });
 
-function buildScaleQuestion(id: string, orderIndex: number, displayGroup: string): PublicQuestion {
+function buildScaleQuestion(id: string, orderIndex: number, displayGroup: string, displayGroupEn?: string): PublicQuestion {
   return {
     ...scaleQuestion,
     id,
@@ -76,6 +105,7 @@ function buildScaleQuestion(id: string, orderIndex: number, displayGroup: string
     config: {
       ...scaleQuestion.config,
       displayGroup,
+      ...(displayGroupEn ? { displayGroupEn } : {}),
     },
   };
 }

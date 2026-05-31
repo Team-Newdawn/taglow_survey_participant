@@ -11,6 +11,7 @@ import { useParticipantProgressStore } from '../../../store/participantProgressS
 import { buildSubmissionAnswers, extractRespondentProfile, findMissingRequiredQuestions } from '../../../utils/answerNormalizer';
 import { buildDraftKey } from '../../../utils/draftKey';
 import { readLocalizedText, resolveSurveyDefaultLocale } from '../../../utils/i18nText';
+import { getSurveyLocaleCopy } from './surveyLocaleCopy';
 import './css/SurveyReviewPage.css';
 
 export function SurveyReviewPage() {
@@ -27,6 +28,7 @@ export function SurveyReviewPage() {
   const storage = useMemo(() => new LocalStorageDraftStorage(), []);
   const defaultLocale = resolveSurveyDefaultLocale(survey);
   const displayLocale = locale ?? defaultLocale;
+  const copy = getSurveyLocaleCopy(displayLocale);
 
   if (!survey || !session) {
     return null;
@@ -76,32 +78,32 @@ export function SurveyReviewPage() {
   return (
     <main className="survey-review-page">
       <header className="survey-review-page__header">
-        <p>제출 전 검토</p>
-        <h1>응답 내용을 확인해주세요.</h1>
+        <p>{copy.reviewEyebrow}</p>
+        <h1>{copy.reviewTitle}</h1>
       </header>
 
       {missingTotal > 0 ? (
-        <Message tone="warning" title={`${missingTotal}개의 필수 문항이 남아 있습니다.`}>
-          <p>누락된 섹션으로 이동해 답변을 완료해주세요.</p>
+        <Message tone="warning" title={copy.missingRequiredTitle(missingTotal)}>
+          <p>{copy.missingRequiredDescription}</p>
         </Message>
       ) : (
-        <Message tone="success" title="필수 문항을 모두 답했습니다.">
-          <p>제출 후에는 이 화면에서 수정할 수 없습니다.</p>
+        <Message tone="success" title={copy.allRequiredAnsweredTitle}>
+          <p>{copy.allRequiredAnsweredDescription}</p>
         </Message>
       )}
 
       <section className="survey-review-page__summary">
         <div>
           <span>{survey.sections.length}</span>
-          <p>섹션</p>
+          <p>{copy.sectionsSummaryLabel}</p>
         </div>
         <div>
           <span>{buildSubmissionAnswers(survey, values).length}</span>
-          <p>응답</p>
+          <p>{copy.answersSummaryLabel}</p>
         </div>
         <div>
           <span>{imageTagCount}</span>
-          <p>위치 표시</p>
+          <p>{copy.imageTagsSummaryLabel}</p>
         </div>
       </section>
 
@@ -110,24 +112,24 @@ export function SurveyReviewPage() {
           <article key={section.id}>
             <div>
               <h2>{readLocalizedText(section.title, displayLocale, defaultLocale)}</h2>
-              <p>{missing.length > 0 ? `${missing.length}개 문항이 남아 있습니다.` : '완료되었습니다.'}</p>
+              <p>{missing.length > 0 ? copy.sectionMissingLabel(missing.length) : copy.sectionCompleteLabel}</p>
             </div>
             <ButtonLink variant={missing.length > 0 ? 'secondary' : 'tertiary'} href={`/survey/${publicSlug}/sections/${section.sectionKey}`}>
-              {missing.length > 0 ? '답변하기' : '수정'}
+              {missing.length > 0 ? copy.answerSection : copy.editSection}
             </ButtonLink>
           </article>
         ))}
       </section>
 
       {submitMutation.isError ? (
-        <Message tone="error" title="제출하지 못했습니다.">
-          <p>네트워크 상태를 확인한 뒤 다시 시도해주세요. 작성 중인 응답은 유지됩니다.</p>
+        <Message tone="error" title={copy.submitErrorTitle}>
+          <p>{copy.submitErrorDescription}</p>
         </Message>
       ) : null}
 
       <div className="survey-review-page__bottom">
         <Button fullWidth disabled={submitMutation.isPending || missingTotal > 0} onClick={submit}>
-          {submitMutation.isPending ? '제출 중' : '최종 제출'}
+          {submitMutation.isPending ? copy.submitting : copy.finalSubmit}
         </Button>
       </div>
     </main>

@@ -22,6 +22,7 @@ import { MultiSelectQuestionGroup } from './components/MultiSelectQuestionGroup'
 import { QuestionRenderer } from './components/QuestionRenderer';
 import { ScaleQuestionGroup } from './components/ScaleQuestionGroup';
 import { buildQuestionRenderBlocks, getQuestionRenderBlockId } from './components/questionRenderBlocks';
+import { getSurveyLocaleCopy } from './surveyLocaleCopy';
 import './css/SurveySectionPage.css';
 
 const DRAFT_SCHEMA_VERSION = 1;
@@ -146,6 +147,7 @@ export function SurveySectionPage() {
   const currentQuestionScreen = questionScreens[activeQuestionScreenIndex] ?? [];
   const currentScreenAssets = resolveQuestionAssets(survey?.assets ?? [], currentQuestionScreen);
   const currentScreenAssetUrlsQuery = useAssetUrlsQuery(currentScreenAssets);
+  const copy = getSurveyLocaleCopy(displayLocale);
 
   if (!survey || !section) {
     return null;
@@ -222,17 +224,22 @@ export function SurveySectionPage() {
         description={section.description ? readLocalizedText(section.description, displayLocale, defaultLocale) : undefined}
         current={sectionIndex + 1}
         total={survey.sections.length}
-        progressLabel={`${sectionIndex + 1}/${survey.sections.length}섹션`}
+        progressLabel={copy.sectionProgress(sectionIndex + 1, survey.sections.length)}
       />
 
       <div ref={bodyRef} className="survey-section-page__body">
         {restoreDraft ? (
-          <DraftRestoreBanner updatedAt={formatShortDateTime(restoreDraft.updatedAt)} onRestore={restoreCurrentDraft} onRestart={discardRestoreDraft} />
+          <DraftRestoreBanner
+            updatedAt={formatShortDateTime(restoreDraft.updatedAt)}
+            locale={displayLocale}
+            onRestore={restoreCurrentDraft}
+            onRestart={discardRestoreDraft}
+          />
         ) : null}
 
         {missingQuestionIds.length > 0 ? (
-          <Message tone="error" title="필수 문항을 먼저 답해주세요.">
-            <p>응답하지 않은 문항을 확인한 뒤 다음 섹션으로 이동할 수 있습니다.</p>
+          <Message tone="error" title={copy.requiredMissingTitle}>
+            <p>{copy.requiredMissingDescription}</p>
           </Message>
         ) : null}
 
@@ -242,7 +249,7 @@ export function SurveySectionPage() {
               return (
                 <ScaleQuestionGroup
                   key={block.id}
-                  groupTitle={block.groupTitle}
+                  groupTitle={readGroupTitle(block, displayLocale)}
                   questions={block.questions}
                   locale={displayLocale}
                   fallbackLocale={defaultLocale}
@@ -260,7 +267,7 @@ export function SurveySectionPage() {
               return (
                 <MultiSelectQuestionGroup
                   key={block.id}
-                  groupTitle={block.groupTitle}
+                  groupTitle={readGroupTitle(block, displayLocale)}
                   questions={block.questions}
                   locale={displayLocale}
                   fallbackLocale={defaultLocale}
@@ -283,7 +290,7 @@ export function SurveySectionPage() {
                 locale={displayLocale}
                 fallbackLocale={defaultLocale}
                 value={form.watch(block.question.id)}
-                error={missingQuestionIds.includes(block.question.id) ? '필수 문항입니다.' : undefined}
+                error={missingQuestionIds.includes(block.question.id) ? copy.requiredQuestion : undefined}
                 number={renderBlockNumberById.get(block.question.id)}
                 onChange={(value) => {
                   form.setValue(block.question.id, value, { shouldDirty: true, shouldTouch: true });
@@ -294,12 +301,12 @@ export function SurveySectionPage() {
         </form>
       </div>
 
-      <nav className="survey-section-page__bottom" aria-label="섹션 이동">
+      <nav className="survey-section-page__bottom" aria-label={copy.sectionNavigation}>
         <Button type="button" variant="secondary" onClick={goPrevious}>
-          이전
+          {copy.previous}
         </Button>
         <Button type="button" onClick={goNext}>
-          {hasNextQuestionScreen || nextSection ? '다음' : '검토하기'}
+          {hasNextQuestionScreen || nextSection ? copy.next : copy.review}
         </Button>
       </nav>
     </main>
@@ -328,6 +335,13 @@ function buildQuestionScreens(questions: PublicQuestion[]): PublicQuestion[][] {
 
 function isImageTagQuestion(question: PublicQuestion): boolean {
   return question.questionType === 'image_tag' || question.questionType === 'participant_image_tag';
+}
+
+function readGroupTitle(
+  block: Extract<ReturnType<typeof buildQuestionRenderBlocks>[number], { type: 'scale_group' | 'multi_select_group' }>,
+  locale: 'ko' | 'en',
+): string {
+  return locale === 'en' && block.groupTitleEn ? block.groupTitleEn : block.groupTitle;
 }
 
 function resolveQuestionAssets(assets: SurveyAsset[], questions: PublicQuestion[]): SurveyAsset[] {

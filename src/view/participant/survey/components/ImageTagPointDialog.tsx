@@ -1,6 +1,8 @@
 import { useId } from 'react';
 
+import type { Locale } from '../../../../api/participant';
 import { Button } from '../../../../components/Button';
+import { getSurveyLocaleCopy } from '../surveyLocaleCopy';
 import type { ImageTagOption } from './imageTagOptions';
 
 export type ImageTagDialogPoint = {
@@ -13,6 +15,7 @@ type ImageTagPointDialogProps = {
   point: ImageTagDialogPoint;
   tagTypes: ImageTagOption[];
   reasonRequired: boolean;
+  locale: Locale;
   error?: string;
   onChange: (patch: Partial<ImageTagDialogPoint>) => void;
   onCancel: () => void;
@@ -22,6 +25,7 @@ type ImageTagPointDialogProps = {
 
 export function ImageTagPointDialog(props: ImageTagPointDialogProps) {
   const titleId = useId();
+  const copy = getSurveyLocaleCopy(props.locale);
 
   return (
     <div
@@ -45,14 +49,14 @@ export function ImageTagPointDialog(props: ImageTagPointDialogProps) {
       >
         <div className="image-tag-question__dialog-header">
           <h3 id={titleId}>{props.title}</h3>
-          <p>선택한 위치에 남길 내용을 입력해주세요.</p>
+          <p>{copy.imageTagDialogDescription}</p>
         </div>
 
         <label className="image-tag-question__dialog-field">
-          <span>카테고리</span>
+          <span>{copy.imageTagCategory}</span>
           <select
             autoFocus
-            aria-label="카테고리"
+            aria-label={copy.imageTagCategory}
             value={props.point.tagType}
             onChange={(event) => props.onChange({ tagType: event.target.value })}
           >
@@ -65,11 +69,11 @@ export function ImageTagPointDialog(props: ImageTagPointDialogProps) {
         </label>
 
         <label className="image-tag-question__dialog-field">
-          <span>{props.reasonRequired ? '이유' : '이유 (선택)'}</span>
+          <span>{props.reasonRequired ? copy.imageTagReason : copy.imageTagReasonOptional}</span>
           <textarea
-            aria-label="이유"
+            aria-label={copy.imageTagReason}
             value={props.point.textValue ?? ''}
-            placeholder={props.reasonRequired ? '어떤 부분인지 짧게 적어주세요.' : '필요하면 추가 설명을 적어주세요.'}
+            placeholder={props.reasonRequired ? copy.imageTagReasonPlaceholder : copy.imageTagReasonOptionalPlaceholder}
             onChange={(event) => props.onChange({ textValue: event.target.value })}
           />
         </label>
@@ -83,14 +87,14 @@ export function ImageTagPointDialog(props: ImageTagPointDialogProps) {
         <div className="image-tag-question__dialog-actions">
           {props.onDelete ? (
             <Button type="button" variant="danger" onClick={props.onDelete}>
-              삭제
+              {copy.delete}
             </Button>
           ) : null}
           <Button type="button" variant="secondary" onClick={props.onCancel}>
-            취소
+            {copy.cancel}
           </Button>
           <Button type="button" onClick={props.onSave}>
-            저장
+            {copy.save}
           </Button>
         </div>
       </div>
