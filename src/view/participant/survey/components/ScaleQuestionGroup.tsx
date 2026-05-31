@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react';
 
 import type { Locale, PublicQuestion } from '../../../../api/participant';
 import { readLocalizedText } from '../../../../utils/i18nText';
+import { getSurveyLocaleCopy } from '../surveyLocaleCopy';
 import { readLowScoreThreshold, readScaleValue, ScaleQuestionBody } from './ScaleQuestion';
 import './css/ScaleQuestionGroup.css';
 
@@ -22,7 +23,8 @@ export function ScaleQuestionGroup(props: ScaleQuestionGroupProps) {
   const firstMissingQuestionId = props.questions.find((question) => props.missingQuestionIds.includes(question.id))?.id;
   const answeredCount = props.questions.filter((question) => readScaleValue(props.values[question.id]).scoreValue).length;
   const isRequired = props.questions.some((question) => question.isRequired);
-  const headingLabel = `${typeof props.number === 'number' ? `${props.number}. ` : ''}${props.groupTitle}${isRequired ? ' 필수' : ''}`;
+  const copy = getSurveyLocaleCopy(props.locale);
+  const headingLabel = `${typeof props.number === 'number' ? `${props.number}. ` : ''}${props.groupTitle}${isRequired ? ` ${copy.required}` : ''}`;
 
   useEffect(() => {
     if (firstMissingQuestionId) {
@@ -44,12 +46,10 @@ export function ScaleQuestionGroup(props: ScaleQuestionGroupProps) {
             {typeof props.number === 'number' ? <span className="scale-question-group__number">{props.number}.</span> : null}
             <span className="scale-question-group__title-text">
               {props.groupTitle}
-              {isRequired ? <span aria-label="필수"> *</span> : null}
+              {isRequired ? <span aria-label={copy.required}> *</span> : null}
             </span>
           </h2>
-          <p>
-            {answeredCount}/{props.questions.length}개 응답
-          </p>
+          <p>{copy.answeredCount(answeredCount, props.questions.length)}</p>
         </div>
       </div>
 
@@ -58,7 +58,7 @@ export function ScaleQuestionGroup(props: ScaleQuestionGroupProps) {
           const value = readScaleValue(props.values[question.id]);
           const scoreValue = value.scoreValue;
           const isExpanded = expandedQuestionId === question.id;
-          const error = props.missingQuestionIds.includes(question.id) ? '필수 문항입니다.' : undefined;
+          const error = props.missingQuestionIds.includes(question.id) ? copy.requiredQuestion : undefined;
           const panelId = `${question.id}-scale-panel`;
           const lowScoreThreshold = readLowScoreThreshold(question);
 
@@ -73,10 +73,10 @@ export function ScaleQuestionGroup(props: ScaleQuestionGroupProps) {
               >
                 <span className="scale-question-group__item-title">
                   {readScaleGroupItemLabel(question, props.locale, props.fallbackLocale)}
-                  {question.isRequired ? <span aria-label="필수"> *</span> : null}
+                  {question.isRequired ? <span aria-label={copy.required}> *</span> : null}
                 </span>
                 <span className={scoreValue ? 'scale-question-group__score is-answered' : 'scale-question-group__score'}>
-                  {scoreValue ? `${scoreValue}점` : '미응답'}
+                  {scoreValue ? copy.score(scoreValue) : copy.unanswered}
                 </span>
                 <span className="scale-question-group__toggle" aria-hidden="true">
                   {isExpanded ? '-' : '+'}
@@ -88,6 +88,7 @@ export function ScaleQuestionGroup(props: ScaleQuestionGroupProps) {
                   <ScaleQuestionBody
                     value={value}
                     threshold={lowScoreThreshold}
+                    locale={props.locale}
                     onChange={(nextValue) => props.onChange(question.id, nextValue)}
                     onScoreSelect={(score) => {
                       if (score > lowScoreThreshold) {

@@ -1,3 +1,5 @@
+import type { Locale } from '../../../../api/participant';
+import { getSurveyLocaleCopy } from '../surveyLocaleCopy';
 import { QuestionShell } from './QuestionShell';
 import type { QuestionComponentProps } from './questionComponentTypes';
 import { LowScoreFollowUp } from './LowScoreFollowUp';
@@ -12,6 +14,7 @@ type ScaleValue = {
 type ScaleQuestionBodyProps = {
   value: ScaleValue;
   threshold: number;
+  locale: Locale;
   onChange: (value: ScaleValue) => void;
   onScoreSelect?: (score: number, value: ScaleValue) => void;
 };
@@ -22,12 +25,13 @@ export function ScaleQuestion(props: QuestionComponentProps<unknown>) {
 
   return (
     <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
-      <ScaleQuestionBody value={value} threshold={threshold} onChange={props.onChange} />
+      <ScaleQuestionBody value={value} threshold={threshold} locale={props.locale} onChange={props.onChange} />
     </QuestionShell>
   );
 }
 
-export function ScaleQuestionBody({ value, threshold, onChange, onScoreSelect }: ScaleQuestionBodyProps) {
+export function ScaleQuestionBody({ value, threshold, locale, onChange, onScoreSelect }: ScaleQuestionBodyProps) {
+  const copy = getSurveyLocaleCopy(locale);
   const selectScore = (score: number) => {
     const nextValue = createScaleValueForScore(value, score, threshold);
     onChange(nextValue);
@@ -37,8 +41,8 @@ export function ScaleQuestionBody({ value, threshold, onChange, onScoreSelect }:
   return (
     <div className="scale-question">
       <div className="scale-question__labels">
-        <span>1 매우 낮음</span>
-        <span>5 매우 높음</span>
+        <span>{copy.scaleLowLabel}</span>
+        <span>{copy.scaleHighLabel}</span>
       </div>
       <div className="scale-question__buttons">
         {[1, 2, 3, 4, 5].map((score) => (
@@ -57,6 +61,7 @@ export function ScaleQuestionBody({ value, threshold, onChange, onScoreSelect }:
         threshold={threshold}
         reason={value.lowScoreReason}
         text={value.lowScoreText}
+        locale={locale}
         onChange={(next) => onChange({ ...value, ...next })}
       />
     </div>

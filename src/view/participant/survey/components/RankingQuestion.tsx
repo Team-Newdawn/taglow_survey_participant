@@ -1,5 +1,6 @@
 import { QuestionShell } from './QuestionShell';
 import type { QuestionComponentProps } from './questionComponentTypes';
+import { getSurveyLocaleCopy } from '../surveyLocaleCopy';
 import { getDisplayOptions } from './questionOptions';
 import './css/RankingQuestion.css';
 
@@ -17,6 +18,7 @@ export function RankingQuestion(props: QuestionComponentProps<unknown>) {
   const rankedOptions = value.rankedOptions ?? [];
   const options = getDisplayOptions(props.question, props.locale, props.fallbackLocale);
   const maxRank = props.question.validation.maxSelections ?? props.question.config.maxSelections ?? 3;
+  const copy = getSurveyLocaleCopy(props.locale);
 
   const toggle = (optionValue: string) => {
     const existing = rankedOptions.find((item) => item.optionValue === optionValue);
@@ -34,12 +36,12 @@ export function RankingQuestion(props: QuestionComponentProps<unknown>) {
   return (
     <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
       <div className="ranking-question">
-        <p>가장 중요한 것부터 선택해주세요.</p>
+        <p>{copy.rankInstruction}</p>
         {options.map((option) => {
           const rank = rankedOptions.find((item) => item.optionValue === option.value)?.rank;
           return (
             <button key={option.value} type="button" className={rank ? 'is-selected' : ''} onClick={() => toggle(option.value)}>
-              <span>{rank ? `${rank}순위` : '-'}</span>
+              <span>{rank ? copy.rankLabel(rank) : '-'}</span>
               {option.label}
             </button>
           );

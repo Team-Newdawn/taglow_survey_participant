@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { AppRoutes } from '../../../app/router';
 import { useParticipantDraftStore } from '../../../store/participantDraftStore';
+import { useParticipantLocaleStore } from '../../../store/participantLocaleStore';
 import { useParticipantProgressStore } from '../../../store/participantProgressStore';
 import { createFakeParticipantApiController } from '../../../test/fakeParticipantApiController';
 import { publishedSurveyFixture } from '../../../test/fixtures/publicSurveyFixture';
@@ -13,6 +14,7 @@ describe('SurveySectionPage', () => {
   beforeEach(() => {
     window.localStorage.clear();
     useParticipantDraftStore.getState().clearDraftValues();
+    useParticipantLocaleStore.getState().setLocale('ko');
     useParticipantProgressStore.getState().resetProgress();
   });
 
@@ -138,6 +140,24 @@ describe('SurveySectionPage', () => {
     expect(await screen.findByText('제출 전 검토')).toBeInTheDocument();
   });
 
+  it('renders grouped scale question titles in English when English is selected', async () => {
+    const survey = buildScaleGroupSurvey();
+    useParticipantLocaleStore.getState().setLocale('en');
+
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/sections/facility',
+      controller: createFakeParticipantApiController({ survey }),
+    });
+
+    expect(await screen.findByRole('heading', { name: /^1\. What is your level of satisfaction with Silent Hours/ })).toBeInTheDocument();
+    expect(screen.getByText('0/2 answered')).toBeInTheDocument();
+    expect(screen.getByText('2/2 sections')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Review' })).toBeInTheDocument();
+    expect(screen.queryByText('0/2개 응답')).not.toBeInTheDocument();
+    expect(screen.queryByText('2/2섹션')).not.toBeInTheDocument();
+    expect(screen.queryByText(/소등제도/)).not.toBeInTheDocument();
+  });
+
   it('scrolls the section body to the top when moving to the next section', async () => {
     const survey = buildTwoScaleSectionSurvey();
 
@@ -171,6 +191,7 @@ function buildScaleGroupSurvey() {
   const facilitySection = publishedSurveyFixture.sections[1];
   const baseScaleQuestion = facilitySection.questions[0];
   const displayGroup = "'소등제도'와 관련된 다음 항목에 대한 만족도에 대해 어떻게 생각하십니까?";
+  const displayGroupEn = 'What is your level of satisfaction with Silent Hours?';
 
   return {
     ...publishedSurveyFixture,
@@ -183,17 +204,17 @@ function buildScaleGroupSurvey() {
             ...baseScaleQuestion,
             id: 'question-light-off-time',
             questionKey: 'light_off_time',
-            title: { ko: `${displayGroup} [(1) 소등시간]` },
+            title: { ko: `${displayGroup} [(1) 소등시간]`, en: `${displayGroupEn} [(1) Silent Hours Operating Hours]` },
             orderIndex: 0,
-            config: { ...baseScaleQuestion.config, displayGroup },
+            config: { ...baseScaleQuestion.config, displayGroup, displayGroupEn },
           },
           {
             ...baseScaleQuestion,
             id: 'question-light-off-enabled',
             questionKey: 'light_off_enabled',
-            title: { ko: `${displayGroup} [(2) 소등 여부]` },
+            title: { ko: `${displayGroup} [(2) 소등 여부]`, en: `${displayGroupEn} [(2) Compliance with Silent Hours Rules]` },
             orderIndex: 1,
-            config: { ...baseScaleQuestion.config, displayGroup },
+            config: { ...baseScaleQuestion.config, displayGroup, displayGroupEn },
           },
         ],
       },

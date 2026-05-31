@@ -1,5 +1,6 @@
 import type { Locale, PublicQuestion } from '../../../../api/participant';
 import { readOptionLabel } from '../../../../utils/i18nText';
+import { getSurveyLocaleCopy } from '../surveyLocaleCopy';
 import { QuestionShell } from './QuestionShell';
 import type { QuestionComponentProps } from './questionComponentTypes';
 import { getDisplayOptions } from './questionOptions';
@@ -13,11 +14,11 @@ type TextValue = {
 };
 
 const defaultOpinionTypes = [
-  { value: 'discomfort', label: '불편' },
-  { value: 'improvement', label: '개선' },
-  { value: 'praise', label: '칭찬' },
-  { value: 'question', label: '문의' },
-  { value: 'other', label: '기타' },
+  { value: 'discomfort', label: { ko: '불편', en: 'Discomfort' } },
+  { value: 'improvement', label: { ko: '개선', en: 'Improvement' } },
+  { value: 'praise', label: { ko: '칭찬', en: 'Praise' } },
+  { value: 'question', label: { ko: '문의', en: 'Question' } },
+  { value: 'other', label: { ko: '기타', en: 'Other' } },
 ];
 
 export function TextQuestion(props: QuestionComponentProps<unknown>) {
@@ -26,12 +27,13 @@ export function TextQuestion(props: QuestionComponentProps<unknown>) {
   const isSelectionText = opinionTypes.length > 0;
   const isShortText = isShortTextQuestion(props.question);
   const maxLength = readTextMaxLength(props.question);
+  const copy = getSurveyLocaleCopy(props.locale);
 
   return (
     <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
       <div className="text-question">
         {isSelectionText ? (
-          <div className="text-question__opinion-group" role="radiogroup" aria-label="의견 유형">
+          <div className="text-question__opinion-group" role="radiogroup" aria-label={copy.opinionTypeLabel}>
             {opinionTypes.map((item) => (
               <label key={item.value} className={`text-question__opinion${value.opinionType === item.value ? ' is-selected' : ''}`}>
                 <input
@@ -80,7 +82,9 @@ function getTextOpinionOptions(question: PublicQuestion, locale: Locale, fallbac
     return configuredOptions;
   }
 
-  return question.config.requiresOpinionType === true || question.config.textMode === 'select_text' ? defaultOpinionTypes : [];
+  return question.config.requiresOpinionType === true || question.config.textMode === 'select_text'
+    ? defaultOpinionTypes.map((item) => ({ value: item.value, label: item.label[locale] }))
+    : [];
 }
 
 function isShortTextQuestion(question: PublicQuestion): boolean {

@@ -32,6 +32,29 @@ describe('MultiSelectQuestionGroup', () => {
 
     expect(onChange).toHaveBeenCalledWith('time-1', { selectedOptions: ['05_00_07_00'] });
   });
+
+  it('localizes selected counts and validation copy in English', () => {
+    const questions = [
+      buildGroupedQuestion('time-1', 0, '05_00_07_00', '05:00~07:00'),
+      buildGroupedQuestion('time-2', 1, '07_00_09_00', '07:00~09:00'),
+    ];
+
+    render(
+      <MultiSelectQuestionGroup
+        groupTitle="Select your usual time slots."
+        questions={questions}
+        locale="en"
+        fallbackLocale="ko"
+        values={{}}
+        missingQuestionIds={['time-1']}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/0 selected/)).toBeInTheDocument();
+    expect(screen.getByText('This question is required.')).toBeInTheDocument();
+    expect(screen.queryByText('0개 선택됨')).not.toBeInTheDocument();
+  });
 });
 
 function buildGroupedQuestion(id: string, orderIndex: number, value: string, label: string): PublicQuestion {

@@ -9,12 +9,14 @@ export type QuestionRenderBlock =
       type: 'scale_group';
       id: string;
       groupTitle: string;
+      groupTitleEn?: string;
       questions: PublicQuestion[];
     }>
   | Readonly<{
       type: 'multi_select_group';
       id: string;
       groupTitle: string;
+      groupTitleEn?: string;
       questions: PublicQuestion[];
     }>;
 
@@ -40,6 +42,7 @@ export function buildQuestionRenderBlocks(questions: PublicQuestion[]): Question
           type: 'scale_group',
           id: `${groupQuestions[0].id}-scale-group`,
           groupTitle: scaleGroupTitle,
+          groupTitleEn: readFirstDisplayGroupEn(groupQuestions),
           questions: groupQuestions,
         });
         index = cursor;
@@ -63,6 +66,7 @@ export function buildQuestionRenderBlocks(questions: PublicQuestion[]): Question
           type: 'multi_select_group',
           id: `${groupQuestions[0].id}-multi-select-group`,
           groupTitle: multiSelectGroupTitle,
+          groupTitleEn: readFirstDisplayGroupEn(groupQuestions),
           questions: groupQuestions,
         });
         index = cursor;
@@ -97,4 +101,27 @@ function readMultiSelectDisplayGroup(question: PublicQuestion): string | undefin
 
   const displayGroup = question.config.displayGroup;
   return typeof displayGroup === 'string' && displayGroup.trim().length > 0 ? displayGroup.trim() : undefined;
+}
+
+function readDisplayGroupEn(question: PublicQuestion): string | undefined {
+  return (
+    readConfigString(question.config.displayGroupEn) ??
+    readConfigString(question.config.groupTitleEn) ??
+    readConfigString(question.config.display_group_en)
+  );
+}
+
+function readFirstDisplayGroupEn(questions: PublicQuestion[]): string | undefined {
+  for (const question of questions) {
+    const displayGroupEn = readDisplayGroupEn(question);
+    if (displayGroupEn) {
+      return displayGroupEn;
+    }
+  }
+
+  return undefined;
+}
+
+function readConfigString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
