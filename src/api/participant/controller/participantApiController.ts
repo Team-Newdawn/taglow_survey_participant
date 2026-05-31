@@ -20,6 +20,7 @@ export interface ParticipantApiController {
   checkDuplicateSubmission(command: DuplicateSubmissionCommand): Promise<DuplicateSubmissionResult>;
 
   getAssetUrl(asset: SurveyAsset): Promise<string>;
+  getAssetUrls(assets: SurveyAsset[]): Promise<Record<string, string>>;
   uploadQuestionImage(command: ParticipantQuestionImageUploadCommand): Promise<ParticipantQuestionImageUpload>;
 
   submitSurvey(command: SubmissionCommand): Promise<SubmissionResult>;

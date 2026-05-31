@@ -46,6 +46,25 @@ export class GatewayBackedParticipantApiController implements ParticipantApiCont
   }
 
   async checkAccess(publicSlug: string): Promise<SurveyAccessResult> {
+    if (this.gateway.fetchParticipantSurveyAccess) {
+      const raw = await this.gateway.fetchParticipantSurveyAccess(publicSlug);
+      const survey = raw.survey
+        ? this.mapper.toPublicSurvey({
+            survey: raw.survey,
+            sections: raw.sections ?? [],
+            questions: raw.questions ?? [],
+            assets: raw.assets ?? [],
+          })
+        : undefined;
+
+      return {
+        status: raw.status,
+        survey,
+        session: raw.session,
+        submittedResponseId: raw.responseId,
+      };
+    }
+
     let survey: PublicSurvey;
 
     try {
@@ -104,6 +123,34 @@ export class GatewayBackedParticipantApiController implements ParticipantApiCont
     });
   }
 
+  async getAssetUrls(assets: SurveyAsset[]): Promise<Record<string, string>> {
+    if (assets.length === 0) {
+      return {};
+    }
+
+    if (!this.gateway.createSignedAssetUrls) {
+      const entries = await Promise.all(assets.map(async (asset) => [asset.id, await this.getAssetUrl(asset)] as const));
+      return Object.fromEntries(entries);
+    }
+
+    const assetUrls: Record<string, string> = {};
+    const assetsByBucket = groupAssetsByBucket(assets);
+
+    for (const [bucket, bucketAssets] of assetsByBucket) {
+      const paths = Array.from(new Set(bucketAssets.map((asset) => asset.storagePath)));
+      const urlByPath = await this.gateway.createSignedAssetUrls({ bucket, paths });
+
+      for (const asset of bucketAssets) {
+        const signedUrl = urlByPath[asset.storagePath];
+        if (signedUrl) {
+          assetUrls[asset.id] = signedUrl;
+        }
+      }
+    }
+
+    return assetUrls;
+  }
+
   async uploadQuestionImage(command: ParticipantQuestionImageUploadCommand): Promise<ParticipantQuestionImageUpload> {
     const uploaded = await this.gateway.uploadQuestionImage(command);
     return {
@@ -136,4 +183,16 @@ export class GatewayBackedParticipantApiController implements ParticipantApiCont
       throw new ParticipantApiError(apiError.code, apiError.message, error);
     }
   }
+}
+
+function groupAssetsByBucket(assets: SurveyAsset[]): Map<string, SurveyAsset[]> {
+  const groups = new Map<string, SurveyAsset[]>();
+
+  for (const asset of assets) {
+    const bucketAssets = groups.get(asset.storageBucket) ?? [];
+    bucketAssets.push(asset);
+    groups.set(asset.storageBucket, bucketAssets);
+  }
+
+  return groups;
 }

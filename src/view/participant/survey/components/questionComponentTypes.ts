@@ -3,6 +3,7 @@ import type { Locale, PublicQuestion, SurveyAsset } from '../../../../api/partic
 export type QuestionComponentProps<TValue = unknown> = {
   question: PublicQuestion;
   assets: SurveyAsset[];
+  assetUrls?: Record<string, string>;
   locale: Locale;
   fallbackLocale: Locale;
   value: TValue;

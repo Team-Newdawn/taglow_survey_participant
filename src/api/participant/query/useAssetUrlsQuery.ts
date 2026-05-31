@@ -7,13 +7,14 @@ import { participantQueryKeys } from './queryKeys';
 const SIGNED_ASSET_URL_STALE_TIME_MS = 50 * 60 * 1000;
 const SIGNED_ASSET_URL_GC_TIME_MS = 60 * 60 * 1000;
 
-export function useAssetUrlQuery(asset: SurveyAsset | undefined, options: { enabled?: boolean } = {}) {
+export function useAssetUrlsQuery(assets: SurveyAsset[]) {
   const controller = useParticipantApiController();
+  const assetIds = assets.map((asset) => asset.id);
 
   return useQuery({
-    queryKey: participantQueryKeys.assetUrl(asset?.id ?? ''),
-    queryFn: () => controller.getAssetUrl(asset as SurveyAsset),
-    enabled: Boolean(asset) && options.enabled !== false,
+    queryKey: participantQueryKeys.assetUrls(assetIds),
+    queryFn: () => controller.getAssetUrls(assets),
+    enabled: assets.length > 0,
     staleTime: SIGNED_ASSET_URL_STALE_TIME_MS,
     gcTime: SIGNED_ASSET_URL_GC_TIME_MS,
   });

@@ -10,7 +10,7 @@ import { AccessDeniedPage } from '../view/participant/system/AccessDeniedPage';
 import { AlreadySubmittedPage } from '../view/participant/system/AlreadySubmittedPage';
 import { SurveyClosedPage } from '../view/participant/system/SurveyClosedPage';
 import { SurveyNotFoundPage } from '../view/participant/system/SurveyNotFoundPage';
-import { RequireParticipantAccess, RequirePublishedSurvey } from './routeGuards';
+import { RequireParticipantAccess } from './routeGuards';
 
 export function AppRoutes() {
   return (

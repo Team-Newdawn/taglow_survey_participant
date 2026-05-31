@@ -4,11 +4,13 @@ export { GatewayBackedParticipantApiController } from './controller/gatewayBacke
 export * from './model';
 export { participantQueryKeys } from './query/queryKeys';
 export { useAssetUrlQuery } from './query/useAssetUrlQuery';
+export { useAssetUrlsQuery } from './query/useAssetUrlsQuery';
 export { useDuplicateSubmissionQuery } from './query/useDuplicateSubmissionQuery';
 export { useParticipantQuestionImageUploadMutation } from './query/useParticipantQuestionImageUploadMutation';
 export { useParticipantSessionQuery } from './query/useParticipantSessionQuery';
 export { usePublicSurveyQuery } from './query/usePublicSurveyQuery';
 export { useSubmissionMutation } from './query/useSubmissionMutation';
+export { useSurveyAccessQuery } from './query/useSurveyAccessQuery';
 export { createParticipantApiRuntime } from './runtime/createParticipantApiRuntime';
 export { ParticipantApiRuntimeProvider } from './runtime/participantApiRuntime';
 export { ParticipantApiError } from './service/gateway/apiErrors';

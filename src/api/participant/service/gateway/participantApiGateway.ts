@@ -78,6 +78,20 @@ export type RawPublicSurveyBundle = Readonly<{
   assets: RawAssetRow[];
 }>;
 
+export type RawParticipantSurveyAccessResult = Readonly<{
+  status: 'allowed' | 'unauthenticated' | 'survey_not_found' | 'survey_closed' | 'already_submitted';
+  survey?: RawSurveyRow | null;
+  sections?: RawSectionRow[];
+  questions?: RawQuestionRow[];
+  assets?: RawAssetRow[];
+  session?: {
+    userId: string;
+    email: string;
+  };
+  responseId?: string;
+  submittedAt?: string;
+}>;
+
 export type RawDuplicateSubmissionResult = Readonly<{
   alreadySubmitted: boolean;
   responseId?: string;
@@ -121,6 +135,7 @@ export interface ParticipantApiGateway {
   signInWithGoogle(redirectTo: string): Promise<void>;
   signOut(): Promise<void>;
   fetchPublicSurveyBySlug(publicSlug: string): Promise<RawPublicSurveyBundle>;
+  fetchParticipantSurveyAccess?(publicSlug: string): Promise<RawParticipantSurveyAccessResult>;
   checkDuplicateSubmission(args: {
     surveyId: string;
     participantUserId: string;
@@ -132,6 +147,10 @@ export interface ParticipantApiGateway {
     bucket: string;
     path: string;
   }): Promise<string>;
+  createSignedAssetUrls?(args: {
+    bucket: string;
+    paths: string[];
+  }): Promise<Record<string, string>>;
   uploadQuestionImage(command: {
     surveyId: string;
     questionId: string;

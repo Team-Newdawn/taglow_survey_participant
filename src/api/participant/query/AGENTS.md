@@ -27,3 +27,11 @@ This directory owns TanStack Query hooks for participant server state.
 - Keep query keys aligned with TDD v2: session, public survey by slug, duplicate by survey/user, asset URL by asset id.
 - Include the current auth scope in public survey query keys and wait for session hydration before fetching; Supabase RLS can hide survey rows from anonymous clients.
 - `useSubmissionMutation` success deletes draft and navigates to complete; unique violation should route to already-submitted.
+
+## Performance Rules
+
+- Use the `taglow-performance-first` skill when adding or changing server-state hooks.
+- Set `staleTime`/`gcTime` deliberately; read-mostly survey structure and signed URLs should not refetch on every route transition.
+- Seed downstream query cache when a guard/access response already contains the survey bundle.
+- Avoid query keys that include unstable objects or cause repeated fetches after auth/session hydration.
+- Batch asset/status queries when one screen needs multiple related resources.
