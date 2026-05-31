@@ -45,3 +45,11 @@ uploadQuestionImage(command): Promise<RawParticipantQuestionImageUpload>;
 - Keep HTTP gateway parity with the Supabase gateway contract.
 - The current Supabase participant RLS does not allow client-side response updates, so if answers bulk insert fails after response creation, route a recoverable submission failure instead of trying to mark the response as discarded in browser code.
 - Map unique submitted-response violations to `ALREADY_SUBMITTED`.
+
+## Performance Rules
+
+- Use the `taglow-performance-first` skill for gateway work.
+- Prefer one bundled read/RPC over multiple dependent round trips on login/access, survey load, submit, and Storage signed URL paths.
+- Select only required columns and avoid `.select('*')` on write paths unless callers need every column.
+- Batch Storage signed URL creation when more than one asset can appear in a screen.
+- Preserve fallback methods, but make the optimized Supabase path the default when the backend exposes it.

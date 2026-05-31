@@ -1,7 +1,7 @@
 import type { PropsWithChildren } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 
-import { useDuplicateSubmissionQuery, useParticipantSessionQuery, usePublicSurveyQuery } from '../api/participant';
+import { useParticipantSessionQuery, usePublicSurveyQuery, useSurveyAccessQuery } from '../api/participant';
 import { Message } from '../components/Message';
 
 export function RequirePublishedSurvey(props: PropsWithChildren) {
@@ -25,44 +25,26 @@ export function RequirePublishedSurvey(props: PropsWithChildren) {
 
 export function RequireParticipantAccess(props: PropsWithChildren) {
   const publicSlug = useRequiredPublicSlug();
-  const surveyQuery = usePublicSurveyQuery(publicSlug);
-  const sessionQuery = useParticipantSessionQuery();
-  const survey = surveyQuery.data;
-  const session = sessionQuery.data;
-  const duplicateQuery = useDuplicateSubmissionQuery({
-    surveyId: survey?.id,
-    participantUserId: session?.userId,
-  });
+  const accessQuery = useSurveyAccessQuery(publicSlug);
+  const access = accessQuery.data;
 
-  if (sessionQuery.isPending) {
+  if (accessQuery.isPending) {
     return <GuardState title="참여 가능 여부를 확인하고 있습니다." />;
   }
 
-  if (surveyQuery.isPending) {
-    return <GuardState title="참여 가능 여부를 확인하고 있습니다." />;
-  }
-
-  if ((surveyQuery.isError || !survey) && !session) {
-    return <Navigate to={`/survey/${publicSlug}/login`} replace />;
-  }
-
-  if (surveyQuery.isError || !survey) {
+  if (accessQuery.isError || !access || access.status === 'survey_not_found') {
     return <Navigate to={`/survey/${publicSlug}/not-found`} replace />;
   }
 
-  if (survey.status !== 'published') {
+  if (access.status === 'survey_closed') {
     return <Navigate to={`/survey/${publicSlug}/closed`} replace />;
   }
 
-  if (!session) {
+  if (access.status === 'unauthenticated') {
     return <Navigate to={`/survey/${publicSlug}/login`} replace />;
   }
 
-  if (duplicateQuery.isPending) {
-    return <GuardState title="제출 이력을 확인하고 있습니다." />;
-  }
-
-  if (duplicateQuery.data?.alreadySubmitted) {
+  if (access.status === 'already_submitted') {
     return <Navigate to={`/survey/${publicSlug}/already-submitted`} replace />;
   }
 

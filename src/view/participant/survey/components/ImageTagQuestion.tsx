@@ -37,9 +37,11 @@ export function ImageTagQuestion(props: QuestionComponentProps<unknown>) {
   const asset =
     props.assets.find((item) => item.id === props.question.config.assetId) ??
     props.assets.find((item) => item.questionId === props.question.id || item.sectionId === props.question.sectionId);
-  const assetUrlQuery = useAssetUrlQuery(asset);
+  const preloadedAssetUrl = asset ? props.assetUrls?.[asset.id] : undefined;
+  const assetUrlQuery = useAssetUrlQuery(asset, { enabled: !preloadedAssetUrl });
+  const assetUrl = preloadedAssetUrl ?? assetUrlQuery.data;
   const maxTags = props.question.config.maxTags ?? props.question.validation.maxSelections ?? 5;
-  const canAddPoint = Boolean(asset && assetUrlQuery.data && points.length < maxTags);
+  const canAddPoint = Boolean(asset && assetUrl && points.length < maxTags);
   const isDraggingNewPoint = Boolean(dragPreview);
   const shouldShowStickerHint = canAddPoint && points.length === 0 && !isDraggingNewPoint && !editor;
   const { rootRef, hintStyle } = useStickerHintMotion(shouldShowStickerHint, imageRef, dragDotRef);
@@ -135,9 +137,9 @@ export function ImageTagQuestion(props: QuestionComponentProps<unknown>) {
         {!asset ? <p className="image-tag-question__error">연결된 이미지를 찾을 수 없습니다.</p> : null}
         {assetUrlQuery.isError ? <p className="image-tag-question__error">이미지를 불러오지 못했습니다. 다시 시도해주세요.</p> : null}
         <div className={canvasClassName}>
-          {assetUrlQuery.data ? (
+          {assetUrl ? (
             <div className="image-tag-question__image-stage">
-              <img ref={imageRef} src={assetUrlQuery.data} alt="위치를 선택할 시설 이미지" draggable={false} />
+              <img ref={imageRef} src={assetUrl} alt="위치를 선택할 시설 이미지" draggable={false} />
               {points.map((point, index) => (
                 <button
                   key={`${point.xRatio}-${point.yRatio}-${index}`}
