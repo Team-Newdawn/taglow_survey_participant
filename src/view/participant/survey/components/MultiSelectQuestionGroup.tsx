@@ -1,6 +1,7 @@
 import { useId } from 'react';
 
 import type { Locale, PublicQuestion } from '../../../../api/participant';
+import { getSurveyLocaleCopy, type SurveyLocaleCopy } from '../surveyLocaleCopy';
 import { getDisplayOptions } from './questionOptions';
 import './css/MultiSelectQuestionGroup.css';
 
@@ -41,7 +42,8 @@ export function MultiSelectQuestionGroup(props: MultiSelectQuestionGroupProps) {
   const maxSelections = readSelectionCount(props.questions, ['maxSelections', 'maxSelect']);
   const hasError = props.questions.some((question) => props.missingQuestionIds.includes(question.id));
   const otherOption = options.find((option) => option.value === 'other' && isOptionSelected(props.values, option));
-  const headingLabel = `${typeof props.number === 'number' ? `${props.number}. ` : ''}${props.groupTitle}${isRequired ? ' 필수' : ''}`;
+  const copy = getSurveyLocaleCopy(props.locale);
+  const headingLabel = `${typeof props.number === 'number' ? `${props.number}. ` : ''}${props.groupTitle}${isRequired ? ` ${copy.required}` : ''}`;
 
   const toggle = (option: GroupOption) => {
     const value = readMultiSelectValue(props.values[option.question.id]);
@@ -70,10 +72,10 @@ export function MultiSelectQuestionGroup(props: MultiSelectQuestionGroupProps) {
           {typeof props.number === 'number' ? <span className="multi-select-question-group__number">{props.number}.</span> : null}
           <span className="multi-select-question-group__title-text">
             {props.groupTitle}
-            {isRequired ? <span aria-label="필수"> *</span> : null}
+            {isRequired ? <span aria-label={copy.required}> *</span> : null}
           </span>
         </h2>
-        <p>{buildSelectionGuide({ selectedCount, minSelections, maxSelections })}</p>
+        <p>{buildSelectionGuide({ selectedCount, minSelections, maxSelections, copy })}</p>
       </div>
 
       <div className="multi-select-question-group__chips">
@@ -101,10 +103,10 @@ export function MultiSelectQuestionGroup(props: MultiSelectQuestionGroupProps) {
 
       {otherOption ? (
         <label className="multi-select-question-group__other">
-          기타 내용
+          {copy.otherTextLabel}
           <input
             value={readMultiSelectValue(props.values[otherOption.question.id]).otherText ?? ''}
-            placeholder="기타 내용을 적어주세요."
+            placeholder={copy.otherTextPlaceholder}
             onChange={(event) =>
               props.onChange(otherOption.question.id, {
                 ...readMultiSelectValue(props.values[otherOption.question.id]),
@@ -115,7 +117,7 @@ export function MultiSelectQuestionGroup(props: MultiSelectQuestionGroupProps) {
         </label>
       ) : null}
 
-      {hasError ? <p className="multi-select-question-group__error">필수 문항입니다.</p> : null}
+      {hasError ? <p className="multi-select-question-group__error">{copy.requiredQuestion}</p> : null}
     </section>
   );
 }
@@ -143,19 +145,19 @@ function readSelectionCount(questions: PublicQuestion[], keys: string[]): number
   return undefined;
 }
 
-function buildSelectionGuide(args: { selectedCount: number; minSelections: number; maxSelections?: number }): string {
-  const selectedText = `${args.selectedCount}개 선택됨`;
+function buildSelectionGuide(args: { selectedCount: number; minSelections: number; maxSelections?: number; copy: SurveyLocaleCopy }): string {
+  const selectedText = args.copy.selectedCount(args.selectedCount);
 
   if (args.maxSelections && args.minSelections > 0) {
-    return `${selectedText} · ${args.minSelections}개 이상, 최대 ${args.maxSelections}개 선택`;
+    return `${selectedText} · ${args.copy.minMaxSelections(args.minSelections, args.maxSelections)}`;
   }
 
   if (args.maxSelections) {
-    return `${selectedText} · 최대 ${args.maxSelections}개 선택`;
+    return `${selectedText} · ${args.copy.maxSelections(args.maxSelections)}`;
   }
 
   if (args.minSelections > 0) {
-    return `${selectedText} · ${args.minSelections}개 이상 선택`;
+    return `${selectedText} · ${args.copy.minSelections(args.minSelections)}`;
   }
 
   return selectedText;

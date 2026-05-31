@@ -1,5 +1,6 @@
 import { QuestionShell } from './QuestionShell';
 import type { QuestionComponentProps } from './questionComponentTypes';
+import { getSurveyLocaleCopy, type SurveyLocaleCopy } from '../surveyLocaleCopy';
 import { getDisplayOptions } from './questionOptions';
 import './css/MultiSelectQuestion.css';
 
@@ -18,6 +19,7 @@ export function MultiSelectQuestion(props: QuestionComponentProps<unknown>) {
   const maxSelections = readSelectionLimit(
     props.question.validation.maxSelections ?? props.question.validation.maxSelect ?? props.question.config.maxSelections ?? props.question.config.maxSelect,
   );
+  const copy = getSurveyLocaleCopy(props.locale);
 
   const toggle = (optionValue: string) => {
     const isSelected = selectedOptions.includes(optionValue);
@@ -34,7 +36,7 @@ export function MultiSelectQuestion(props: QuestionComponentProps<unknown>) {
   return (
     <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
       <div className="multi-select-question">
-        <p>{buildSelectionGuide({ selectedCount: selectedOptions.length, minSelections, maxSelections })}</p>
+        <p>{buildSelectionGuide({ selectedCount: selectedOptions.length, minSelections, maxSelections, copy })}</p>
         <div className="multi-select-question__options">
           {options.map((option) => {
             const isSelected = selectedOptions.includes(option.value);
@@ -59,10 +61,10 @@ export function MultiSelectQuestion(props: QuestionComponentProps<unknown>) {
         </div>
         {selectedOptions.includes('other') ? (
           <label className="multi-select-question__other">
-            기타 내용
+            {copy.otherTextLabel}
             <input
               value={value.otherText ?? ''}
-              placeholder="기타 내용을 적어주세요."
+              placeholder={copy.otherTextPlaceholder}
               onChange={(event) => props.onChange({ ...value, otherText: event.target.value })}
             />
           </label>
@@ -80,20 +82,20 @@ function readSelectionLimit(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
-function buildSelectionGuide(args: { selectedCount: number; minSelections?: number; maxSelections?: number }): string {
-  const selectedText = `${args.selectedCount}개 선택됨`;
+function buildSelectionGuide(args: { selectedCount: number; minSelections?: number; maxSelections?: number; copy: SurveyLocaleCopy }): string {
+  const selectedText = args.copy.selectedCount(args.selectedCount);
 
   if (args.minSelections && args.maxSelections) {
-    return `${selectedText} · ${args.minSelections}개 이상, 최대 ${args.maxSelections}개 선택`;
+    return `${selectedText} · ${args.copy.minMaxSelections(args.minSelections, args.maxSelections)}`;
   }
 
   if (args.maxSelections) {
-    return `${selectedText} · 최대 ${args.maxSelections}개 선택`;
+    return `${selectedText} · ${args.copy.maxSelections(args.maxSelections)}`;
   }
 
   if (args.minSelections) {
-    return `${selectedText} · ${args.minSelections}개 이상 선택`;
+    return `${selectedText} · ${args.copy.minSelections(args.minSelections)}`;
   }
 
-  return `${selectedText} · 해당하는 항목을 모두 선택해주세요.`;
+  return `${selectedText} · ${args.copy.selectAllThatApply}`;
 }

@@ -4,6 +4,7 @@ import type { PointerEvent } from 'react';
 import type { ParticipantImageTagPoint, ParticipantImageTagValue, SurveyAsset } from '../../../../api/participant';
 import { useAssetUrlQuery, useParticipantQuestionImageUploadMutation } from '../../../../api/participant';
 import { calculateImageRatio } from '../../../../utils/imageRatio';
+import { getSurveyLocaleCopy } from '../surveyLocaleCopy';
 import { ImageTagPointDialog } from './ImageTagPointDialog';
 import { QuestionShell } from './QuestionShell';
 import { getImageTagOptions } from './imageTagOptions';
@@ -31,6 +32,7 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
   const uploadMutation = useParticipantQuestionImageUploadMutation();
   const value = readParticipantImageTagValue(props.value);
   const points = value.points ?? [];
+  const copy = getSurveyLocaleCopy(props.locale);
   const maxTags = readNumber(props.question.config.maxTags) ?? readNumber(props.question.validation.maxSelections) ?? 3;
   const tagTypes = getImageTagOptions(props.question, props.locale, props.fallbackLocale);
   const accept = getAcceptAttribute(props.question.config.acceptedMimeTypes);
@@ -59,7 +61,7 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
   };
 
   const uploadFile = (file: File) => {
-    const validationError = validateFile(file, accept, maxFileSizeMb);
+    const validationError = validateFile(file, accept, maxFileSizeMb, props.locale);
     setFileError(validationError);
 
     if (validationError) {
@@ -147,7 +149,7 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
 
     const textValue = editor.point.textValue?.trim() ?? '';
     if (isTagTextRequired && !textValue) {
-      setEditor({ ...editor, error: '이유를 짧게 적어주세요.' });
+      setEditor({ ...editor, error: copy.imageTagTextRequiredError });
       return;
     }
 
@@ -164,9 +166,9 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
       <div ref={rootRef} className={rootClassName}>
         <div className="participant-image-tag-question__upload">
           <label className="participant-image-tag-question__upload-button">
-            <span>{value.image ? '사진 다시 업로드' : '사진 업로드'}</span>
+            <span>{value.image ? copy.reuploadImage : copy.uploadImage}</span>
             <input
-              aria-label="사진 업로드"
+              aria-label={copy.uploadImageLabel}
               type="file"
               accept={accept}
               disabled={uploadMutation.isPending}
@@ -182,22 +184,22 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
           </label>
         </div>
 
-        <p>사진을 올린 뒤, 건의할 위치를 선택해주세요.</p>
+        <p>{copy.participantImageInstruction}</p>
         {fileError ? <p className="image-tag-question__error">{fileError}</p> : null}
-        {uploadMutation.isError ? <p className="image-tag-question__error">사진을 업로드하지 못했습니다. 다시 시도해주세요.</p> : null}
-        {uploadedUrlQuery.isError ? <p className="image-tag-question__error">업로드한 사진을 불러오지 못했습니다.</p> : null}
+        {uploadMutation.isError ? <p className="image-tag-question__error">{copy.uploadError}</p> : null}
+        {uploadedUrlQuery.isError ? <p className="image-tag-question__error">{copy.uploadedImageLoadError}</p> : null}
 
         <div className={canvasClassName}>
           {imageUrl ? (
             <div className="image-tag-question__image-stage">
-              <img ref={imageRef} src={imageUrl} alt="참여자가 올린 위치 선택 사진" draggable={false} />
+              <img ref={imageRef} src={imageUrl} alt={copy.participantImageAlt} draggable={false} />
               {points.map((point, index) => (
                 <button
                   key={point.id ?? `${point.xRatio}-${point.yRatio}-${index}`}
                   type="button"
                   className="image-tag-question__pin"
                   style={{ left: `${point.xRatio * 100}%`, top: `${point.yRatio * 100}%` }}
-                  aria-label={`${index + 1}번 위치 수정`}
+                  aria-label={copy.editLocationLabel(index + 1)}
                   onClick={() => setEditor({ index, point })}
                 >
                   {index + 1}
@@ -206,7 +208,7 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
             </div>
           ) : (
             <div className="image-tag-question__placeholder">
-              {value.image ? '사진을 준비하고 있습니다.' : '사진을 올리면 위치를 선택할 수 있습니다.'}
+              {value.image ? copy.participantImagePreparing : copy.participantImageEmpty}
             </div>
           )}
         </div>
@@ -217,7 +219,7 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
             type="button"
             className="image-tag-question__drag-dot"
             disabled={!canAddPoint}
-            aria-label="새 위치 스티커를 이미지로 드래그"
+            aria-label={copy.dragNewPinLabel}
             onPointerDown={startDraggingNewPoint}
             onPointerMove={moveDraggingNewPoint}
             onPointerUp={finishDraggingNewPoint}
@@ -239,10 +241,11 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
 
         {editor ? (
           <ImageTagPointDialog
-            title={editor.index === null ? '위치 내용 입력' : `${editor.index + 1}번 위치 수정`}
+            title={editor.index === null ? copy.imageTagDialogNewTitle : copy.imageTagDialogEditTitle(editor.index + 1)}
             point={{ tagType: editor.point.tagType || tagTypes[0].value, textValue: editor.point.textValue }}
             tagTypes={tagTypes}
             reasonRequired={isTagTextRequired}
+            locale={props.locale}
             error={editor.error}
             onChange={updateEditorPoint}
             onCancel={() => setEditor(null)}
@@ -274,17 +277,19 @@ function toUploadedAsset(value: ParticipantImageTagValue, surveyId: string): Sur
   };
 }
 
-function validateFile(file: File, accept: string, maxFileSizeMb: number): string | null {
+function validateFile(file: File, accept: string, maxFileSizeMb: number, locale: 'ko' | 'en'): string | null {
+  const copy = getSurveyLocaleCopy(locale);
+
   if (!file.type.startsWith('image/')) {
-    return '이미지 파일만 업로드할 수 있습니다.';
+    return copy.imageOnlyError;
   }
 
   if (!accept.split(',').some((mimeType) => mimeTypeMatches(mimeType.trim(), file.type))) {
-    return '허용된 이미지 형식이 아닙니다.';
+    return copy.unsupportedImageType;
   }
 
   if (file.size > maxFileSizeMb * 1024 * 1024) {
-    return `${maxFileSizeMb}MB 이하의 이미지만 업로드할 수 있습니다.`;
+    return copy.maxImageSizeError(maxFileSizeMb);
   }
 
   return null;

@@ -2,6 +2,7 @@ import type { PropsWithChildren } from 'react';
 
 import type { Locale, PublicQuestion } from '../../../../api/participant';
 import { readLocalizedText } from '../../../../utils/i18nText';
+import { getSurveyLocaleCopy } from '../surveyLocaleCopy';
 import './css/QuestionShell.css';
 
 type QuestionShellProps = PropsWithChildren<{
@@ -14,7 +15,8 @@ type QuestionShellProps = PropsWithChildren<{
 
 export function QuestionShell({ question, locale, fallbackLocale, error, number, children }: QuestionShellProps) {
   const title = readLocalizedText(question.title, locale, fallbackLocale);
-  const headingLabel = `${typeof number === 'number' ? `${number}. ` : ''}${title}${question.isRequired ? ' 필수' : ''}`;
+  const copy = getSurveyLocaleCopy(locale);
+  const headingLabel = `${typeof number === 'number' ? `${number}. ` : ''}${title}${question.isRequired ? ` ${copy.required}` : ''}`;
 
   return (
     <section className="question-shell" aria-labelledby={`${question.id}-title`}>
@@ -23,7 +25,7 @@ export function QuestionShell({ question, locale, fallbackLocale, error, number,
           {typeof number === 'number' ? <span className="question-shell__number">{number}.</span> : null}
           <span className="question-shell__title-text">
             {title}
-            {question.isRequired ? <span aria-label="필수"> *</span> : null}
+            {question.isRequired ? <span aria-label={copy.required}> *</span> : null}
           </span>
         </h2>
         {question.description ? <p>{readLocalizedText(question.description, locale, fallbackLocale)}</p> : null}

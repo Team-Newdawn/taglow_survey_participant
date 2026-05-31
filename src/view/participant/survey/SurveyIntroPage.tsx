@@ -14,6 +14,7 @@ import { buildDraftKey } from '../../../utils/draftKey';
 import { formatShortDateTime } from '../../../utils/dateTime';
 import { readLocalizedText, resolveSurveyDefaultLocale } from '../../../utils/i18nText';
 import { DraftRestoreBanner } from './components/DraftRestoreBanner';
+import { getSurveyLocaleCopy } from './surveyLocaleCopy';
 import './css/SurveyIntroPage.css';
 
 const DRAFT_SCHEMA_VERSION = 1;
@@ -34,6 +35,7 @@ export function SurveyIntroPage() {
   const displayLocale = locale ?? defaultLocale;
   const firstSection = survey?.sections[0];
   const storage = useMemo(() => new LocalStorageDraftStorage(), []);
+  const copy = getSurveyLocaleCopy(displayLocale);
 
   useEffect(() => {
     if (!survey || !session) {
@@ -89,13 +91,14 @@ export function SurveyIntroPage() {
   return (
     <main className="survey-intro-page">
       <header className="survey-intro-page__header">
-        <p className="survey-intro-page__eyebrow">설문 안내</p>
+        <p className="survey-intro-page__eyebrow">{copy.introEyebrow}</p>
         <h1>{readLocalizedText(survey.title, displayLocale, defaultLocale)}</h1>
       </header>
 
       {draft ? (
         <DraftRestoreBanner
           updatedAt={formatShortDateTime(draft.updatedAt)}
+          locale={displayLocale}
           onRestore={restoreDraft}
           onRestart={startFresh}
         />
@@ -108,7 +111,7 @@ export function SurveyIntroPage() {
       ) : null}
 
       <section className="survey-intro-page__card">
-        <h2>언어</h2>
+        <h2>{copy.language}</h2>
         <div className="survey-intro-page__locale">
           <button type="button" className={displayLocale === 'ko' ? 'is-selected' : ''} onClick={() => setLocale('ko')}>
             한국어
@@ -120,7 +123,7 @@ export function SurveyIntroPage() {
       </section>
 
       <section className="survey-intro-page__sections">
-        <h2>진행할 섹션</h2>
+        <h2>{copy.sectionsToComplete}</h2>
         {survey.sections.map((section, index) => (
           <Link key={section.id} to={`/survey/${publicSlug}/sections/${section.sectionKey}`}>
             <span>{index + 1}</span>
@@ -131,7 +134,7 @@ export function SurveyIntroPage() {
 
       <div className="survey-intro-page__bottom">
         <Button fullWidth onClick={startFresh}>
-          {draft ? '새로 시작하기' : '첫 섹션으로 이동'}
+          {draft ? copy.startFresh : copy.startFirstSection}
         </Button>
       </div>
     </main>

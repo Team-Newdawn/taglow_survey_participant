@@ -1,5 +1,6 @@
 import { QuestionShell } from './QuestionShell';
 import type { QuestionComponentProps } from './questionComponentTypes';
+import { getSurveyLocaleCopy } from '../surveyLocaleCopy';
 import { getDefaultOptions, getDisplayOptions } from './questionOptions';
 import './css/ExperienceQuestion.css';
 
@@ -11,7 +12,8 @@ type ExperienceValue = {
 export function ExperienceQuestion(props: QuestionComponentProps<unknown>) {
   const value = readExperienceValue(props.value);
   const configuredOptions = getDisplayOptions(props.question, props.locale, props.fallbackLocale);
-  const options = configuredOptions.length > 0 ? configuredOptions : getDefaultOptions('experience');
+  const options = configuredOptions.length > 0 ? configuredOptions : getDefaultOptions('experience', props.locale);
+  const copy = getSurveyLocaleCopy(props.locale);
 
   return (
     <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
@@ -28,7 +30,7 @@ export function ExperienceQuestion(props: QuestionComponentProps<unknown>) {
         ))}
         {value.experienceStatus && value.experienceStatus !== 'used' ? (
           <label>
-            <span>이유를 간단히 선택하거나 적어주세요.</span>
+            <span>{copy.experienceReasonLabel}</span>
             <input
               value={value.noExperienceReason ?? ''}
               onChange={(event) => props.onChange({ ...value, noExperienceReason: event.target.value })}

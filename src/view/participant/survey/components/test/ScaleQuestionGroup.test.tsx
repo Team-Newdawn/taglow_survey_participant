@@ -61,6 +61,49 @@ describe('ScaleQuestionGroup', () => {
     expect(screen.getByRole('button', { name: /소등 여부/ })).not.toHaveTextContent(/^4\./);
   });
 
+  it('localizes group counters and row states in English', () => {
+    render(
+      <ScaleQuestionGroup
+        groupTitle="Silent Hours"
+        questions={[
+          { ...buildGroupQuestion('scale-1', 0, 'Silent Hours Operating Hours'), title: { en: 'Silent Hours [(1) Operating Hours]' } },
+          { ...buildGroupQuestion('scale-2', 1, 'Compliance'), title: { en: 'Silent Hours [(2) Compliance]' } },
+        ]}
+        locale="en"
+        fallbackLocale="en"
+        values={{ 'scale-1': { scoreValue: 4 } }}
+        missingQuestionIds={['scale-2']}
+        number={3}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('1/2 answered')).toBeInTheDocument();
+    expect(screen.getByText('4 pts')).toBeInTheDocument();
+    expect(screen.getByText('Not answered')).toBeInTheDocument();
+    expect(screen.getByText('This question is required.')).toBeInTheDocument();
+  });
+
+  it('localizes scale endpoint labels in English', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ScaleQuestionGroup
+        groupTitle="Silent Hours"
+        questions={[{ ...buildGroupQuestion('scale-1', 0, 'Silent Hours Operating Hours'), title: { en: 'Silent Hours [(1) Operating Hours]' } }]}
+        locale="en"
+        fallbackLocale="en"
+        values={{}}
+        missingQuestionIds={[]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /Operating Hours/ }));
+    expect(screen.getByText('1 Very low')).toBeInTheDocument();
+    expect(screen.getByText('5 Very high')).toBeInTheDocument();
+  });
+
   it('extracts item labels from bracket text without a source number', () => {
     render(
       <ScaleQuestionGroup

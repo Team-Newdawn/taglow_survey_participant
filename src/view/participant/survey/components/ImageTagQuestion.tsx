@@ -4,6 +4,7 @@ import type { PointerEvent } from 'react';
 import type { ImageTagPoint } from '../../../../api/participant';
 import { useAssetUrlQuery } from '../../../../api/participant';
 import { calculateImageRatio } from '../../../../utils/imageRatio';
+import { getSurveyLocaleCopy } from '../surveyLocaleCopy';
 import { ImageTagPointDialog } from './ImageTagPointDialog';
 import { QuestionShell } from './QuestionShell';
 import { getImageTagOptions } from './imageTagOptions';
@@ -34,6 +35,7 @@ export function ImageTagQuestion(props: QuestionComponentProps<unknown>) {
   const value = readImageTagValue(props.value);
   const points = value.points ?? [];
   const tagTypes = getImageTagOptions(props.question, props.locale, props.fallbackLocale);
+  const copy = getSurveyLocaleCopy(props.locale);
   const asset =
     props.assets.find((item) => item.id === props.question.config.assetId) ??
     props.assets.find((item) => item.questionId === props.question.id || item.sectionId === props.question.sectionId);
@@ -119,7 +121,7 @@ export function ImageTagQuestion(props: QuestionComponentProps<unknown>) {
 
     const textValue = editor.point.textValue.trim();
     if (!textValue) {
-      setEditor({ ...editor, error: '이유를 짧게 적어주세요.' });
+      setEditor({ ...editor, error: copy.imageTagTextRequiredError });
       return;
     }
 
@@ -133,20 +135,20 @@ export function ImageTagQuestion(props: QuestionComponentProps<unknown>) {
   return (
     <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
       <div ref={rootRef} className={rootClassName}>
-        <p>사진에서 불편하거나 개선이 필요한 위치를 선택해주세요.</p>
-        {!asset ? <p className="image-tag-question__error">연결된 이미지를 찾을 수 없습니다.</p> : null}
-        {assetUrlQuery.isError ? <p className="image-tag-question__error">이미지를 불러오지 못했습니다. 다시 시도해주세요.</p> : null}
+        <p>{copy.imageTagInstruction}</p>
+        {!asset ? <p className="image-tag-question__error">{copy.imageMissing}</p> : null}
+        {assetUrlQuery.isError ? <p className="image-tag-question__error">{copy.imageLoadError}</p> : null}
         <div className={canvasClassName}>
           {assetUrl ? (
             <div className="image-tag-question__image-stage">
-              <img ref={imageRef} src={assetUrl} alt="위치를 선택할 시설 이미지" draggable={false} />
+              <img ref={imageRef} src={assetUrl} alt={copy.imageAlt} draggable={false} />
               {points.map((point, index) => (
                 <button
                   key={`${point.xRatio}-${point.yRatio}-${index}`}
                   type="button"
                   className="image-tag-question__pin"
                   style={{ left: `${point.xRatio * 100}%`, top: `${point.yRatio * 100}%` }}
-                  aria-label={`${index + 1}번 위치 수정`}
+                  aria-label={copy.editLocationLabel(index + 1)}
                   onClick={() => setEditor({ index, point })}
                 >
                   {index + 1}
@@ -154,7 +156,7 @@ export function ImageTagQuestion(props: QuestionComponentProps<unknown>) {
               ))}
             </div>
           ) : (
-            <div className="image-tag-question__placeholder">이미지를 준비하고 있습니다.</div>
+            <div className="image-tag-question__placeholder">{copy.imagePreparing}</div>
           )}
         </div>
 
@@ -164,7 +166,7 @@ export function ImageTagQuestion(props: QuestionComponentProps<unknown>) {
             type="button"
             className="image-tag-question__drag-dot"
             disabled={!canAddPoint}
-            aria-label="새 위치 스티커를 이미지로 드래그"
+            aria-label={copy.dragNewPinLabel}
             onPointerDown={startDraggingNewPoint}
             onPointerMove={moveDraggingNewPoint}
             onPointerUp={finishDraggingNewPoint}
@@ -186,10 +188,11 @@ export function ImageTagQuestion(props: QuestionComponentProps<unknown>) {
 
         {editor ? (
           <ImageTagPointDialog
-            title={editor.index === null ? '위치 내용 입력' : `${editor.index + 1}번 위치 수정`}
+            title={editor.index === null ? copy.imageTagDialogNewTitle : copy.imageTagDialogEditTitle(editor.index + 1)}
             point={editor.point}
             tagTypes={tagTypes}
             reasonRequired
+            locale={props.locale}
             error={editor.error}
             onChange={updateEditorPoint}
             onCancel={() => setEditor(null)}
