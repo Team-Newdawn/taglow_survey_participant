@@ -101,4 +101,26 @@ describe('SurveyIntroPage', () => {
     expect(screen.queryByText('한국어 설문 소개입니다.')).not.toBeInTheDocument();
     expect(document.querySelector('.survey-intro-page__sections')).not.toHaveTextContent('Survey guide');
   });
+
+  it('uses the survey English description when the English locale is selected', async () => {
+    const survey = {
+      ...publishedSurveyFixture,
+      description: {
+        ko: '한국어 설문 설명입니다.',
+        en: 'This is the English survey description.',
+      },
+    };
+
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/intro',
+      controller: createFakeParticipantApiController({ survey }),
+    });
+
+    await waitFor(() => expect(screen.getByText('한국어 설문 설명입니다.')).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole('button', { name: 'English' }));
+
+    expect(screen.getByText('This is the English survey description.')).toBeInTheDocument();
+    expect(screen.queryByText('한국어 설문 설명입니다.')).not.toBeInTheDocument();
+  });
 });

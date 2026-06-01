@@ -44,6 +44,43 @@ describe('SupabaseParticipantApiGateway auth', () => {
   });
 });
 
+describe('SupabaseParticipantApiGateway public survey', () => {
+  it('fetches the nullable English survey description in the public bundle', async () => {
+    const maybeSingle = vi.fn(async () => ({
+      data: {
+        id: 'survey-1',
+        title: '생활관 만족도 조사',
+        description: '한국어 설문 설명',
+        description_en: 'English survey description',
+        status: 'published',
+        public_slug: 'fixture-survey',
+        survey_sections: [],
+        questions: [],
+        survey_assets: [],
+      },
+      error: null,
+    }));
+    const or = vi.fn(() => ({ maybeSingle }));
+    let selectedColumns = '';
+    const select = vi.fn((columns: string) => {
+      selectedColumns = columns;
+      return { or };
+    });
+    const from = vi.fn(() => ({ select }));
+    const gateway = new SupabaseParticipantApiGateway({ from } as unknown as SupabaseClient);
+
+    await expect(gateway.fetchPublicSurveyBySlug('fixture-survey')).resolves.toMatchObject({
+      survey: {
+        description_en: 'English survey description',
+      },
+    });
+
+    expect(from).toHaveBeenCalledWith('surveys');
+    expect(select).toHaveBeenCalledTimes(1);
+    expect(selectedColumns).toContain('description_en');
+  });
+});
+
 describe('SupabaseParticipantApiGateway submission', () => {
   it('submits responses through the transactional RPC', async () => {
     const rpc = vi.fn(async () => ({
