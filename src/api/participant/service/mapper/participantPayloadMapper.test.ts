@@ -14,6 +14,7 @@ describe('ParticipantPayloadMapper', () => {
         id: 'survey-1',
         title: '생활관 만족도 조사',
         description: '2026 봄학기 생활관 경험을 알려주세요.',
+        description_en: 'Tell us about your dormitory experience in Spring 2026.',
         status: 'published',
         public_slug: null,
         public_code: 'D93C1C44',
@@ -33,7 +34,7 @@ describe('ParticipantPayloadMapper', () => {
           title_ko: '시설',
           title_en: 'Facilities',
           description_ko: '공간별 만족도를 알려주세요.',
-          description_en: null,
+          description_en: 'Tell us about each space.',
           order_index: 1,
           section_type: 'facility',
           settings: {},
@@ -89,7 +90,10 @@ describe('ParticipantPayloadMapper', () => {
     expect(survey).toMatchObject({
       id: 'survey-1',
       title: { ko: '생활관 만족도 조사' },
-      description: { ko: '2026 봄학기 생활관 경험을 알려주세요.' },
+      description: {
+        ko: '2026 봄학기 생활관 경험을 알려주세요.',
+        en: 'Tell us about your dormitory experience in Spring 2026.',
+      },
       publicSlug: 'D93C1C44',
       publicCode: 'D93C1C44',
       versionGroupId: 'version-group-1',
@@ -100,6 +104,7 @@ describe('ParticipantPayloadMapper', () => {
         {
           sectionKey: 'facility',
           title: { ko: '시설', en: 'Facilities' },
+          description: { ko: '공간별 만족도를 알려주세요.', en: 'Tell us about each space.' },
           questions: [
             {
               questionKey: 'laundry-experience',

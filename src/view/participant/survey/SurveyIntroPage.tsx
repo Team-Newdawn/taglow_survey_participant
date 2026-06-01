@@ -2,7 +2,12 @@ import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
-import { useParticipantSessionQuery, usePublicSurveyQuery } from '../../../api/participant';
+import {
+  useParticipantSessionQuery,
+  usePublicSurveyQuery,
+  type PublicSurvey,
+  type PublicSurveySection,
+} from '../../../api/participant';
 import type { SurveyDraft } from '../../../api/participant/service/draft/draftStorage';
 import { LocalStorageDraftStorage } from '../../../api/participant/service/draft/localStorageDraftStorage';
 import { Button } from '../../../components/Button';
@@ -33,7 +38,8 @@ export function SurveyIntroPage() {
   const session = sessionQuery.data;
   const defaultLocale = resolveSurveyDefaultLocale(survey);
   const displayLocale = locale ?? defaultLocale;
-  const firstSection = survey?.sections[0];
+  const answerSections = survey?.sections.filter((section) => !isIntroSection(section)) ?? [];
+  const firstSection = answerSections[0];
   const storage = useMemo(() => new LocalStorageDraftStorage(), []);
   const copy = getSurveyLocaleCopy(displayLocale);
 
@@ -57,7 +63,7 @@ export function SurveyIntroPage() {
     return null;
   }
 
-  const surveyDescription = survey.description ? readLocalizedText(survey.description, displayLocale, defaultLocale).trim() : '';
+  const surveyDescription = readSurveyIntroDescription(survey, displayLocale, defaultLocale);
 
   const startFresh = async () => {
     if (survey && session) {
@@ -124,7 +130,7 @@ export function SurveyIntroPage() {
 
       <section className="survey-intro-page__sections">
         <h2>{copy.sectionsToComplete}</h2>
-        {survey.sections.map((section, index) => (
+        {answerSections.map((section, index) => (
           <Link key={section.id} to={`/survey/${publicSlug}/sections/${section.sectionKey}`}>
             <span>{index + 1}</span>
             {readLocalizedText(section.title, displayLocale, defaultLocale)}
@@ -139,6 +145,31 @@ export function SurveyIntroPage() {
       </div>
     </main>
   );
+}
+
+function readSurveyIntroDescription(survey: PublicSurvey, locale: 'ko' | 'en', fallbackLocale: 'ko' | 'en'): string {
+  const introSection = survey.sections.find(isIntroSection);
+  const candidates = [introSection?.description, survey.description];
+
+  for (const candidate of candidates) {
+    const localized = candidate?.[locale]?.trim();
+    if (localized) {
+      return localized;
+    }
+  }
+
+  for (const candidate of candidates) {
+    const fallback = readLocalizedText(candidate, locale, fallbackLocale).trim();
+    if (fallback) {
+      return fallback;
+    }
+  }
+
+  return '';
+}
+
+function isIntroSection(section: PublicSurveySection): boolean {
+  return section.sectionType === 'intro' || section.sectionKey === 'intro';
 }
 
 function renderTextWithLinks(text: string): ReactNode[] {
