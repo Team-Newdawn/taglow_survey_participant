@@ -9,11 +9,12 @@ This directory contains generic utilities.
 - `imageRatio.ts`
 - `answerNormalizer.ts`
 - `draftKey.ts`
+- `participantDevice.ts`
 - `dateTime.ts`
 
 ## Responsibilities
 
-- Provide pure helpers for environment reading, locale fallback, image ratios, answer normalization, draft keys, and date formatting.
+- Provide helpers for environment reading, locale fallback, image ratios, answer normalization, draft keys, browser device ids, and date formatting.
 - Keep utilities framework-light and easy to unit test.
 
 ## Rules

@@ -135,6 +135,7 @@ describe('ParticipantPayloadMapper', () => {
     const responsePayload = mapper.toCreateResponsePayload({
       surveyId: 'survey-1',
       participantUserId: 'user-1',
+      participantDeviceId: 'device-1',
       participantEmail: 'Student@EXAMPLE.COM',
       locale: 'ko',
       profile: {
@@ -164,6 +165,7 @@ describe('ParticipantPayloadMapper', () => {
     );
 
     expect(responsePayload).toMatchObject({
+      participant_device_id: 'device-1',
       participant_email: 'student@example.com',
       status: 'submitted',
     });
@@ -179,6 +181,7 @@ describe('ParticipantPayloadMapper', () => {
     const payload = mapper.toSubmitSurveyPayload({
       surveyId: 'survey-1',
       participantUserId: 'user-1',
+      participantDeviceId: 'device-1',
       participantEmail: 'Student@EXAMPLE.COM',
       locale: 'en',
       profile: {
@@ -200,6 +203,7 @@ describe('ParticipantPayloadMapper', () => {
     expect(payload.response).toMatchObject({
       survey_id: 'survey-1',
       participant_user_id: 'user-1',
+      participant_device_id: 'device-1',
       participant_email: 'student@example.com',
       raw_payload: { question1: 'quiet' },
     });

@@ -103,16 +103,55 @@ describe('GatewayBackedParticipantApiController access', () => {
       new ParticipantPayloadMapper(),
     );
 
-    await expect(controller.checkAccess('ABC123')).resolves.toMatchObject({
+    await expect(controller.checkAccess({ publicSlug: 'ABC123', participantDeviceId: 'device-1' })).resolves.toMatchObject({
       status: 'already_submitted',
       survey: { id: 'survey-1', publicCode: 'ABC123' },
       session: { userId: 'user-1', email: 'student@example.com' },
       submittedResponseId: 'response-1',
     });
 
-    expect(fetchParticipantSurveyAccess).toHaveBeenCalledWith('ABC123');
+    expect(fetchParticipantSurveyAccess).toHaveBeenCalledWith({ publicSlug: 'ABC123', participantDeviceId: 'device-1' });
     expect(fetchPublicSurveyBySlug).not.toHaveBeenCalled();
     expect(checkDuplicateSubmission).not.toHaveBeenCalled();
+  });
+
+  it('checks device duplicates after a legacy access RPC response', async () => {
+    const fetchParticipantSurveyAccess = vi.fn(async () => ({
+      status: 'allowed' as const,
+      survey: {
+        id: 'survey-1',
+        status: 'published',
+        title_ko: '테스트 설문',
+        public_code: 'ABC123',
+      },
+      sections: [],
+      questions: [],
+      assets: [],
+      session: { userId: 'other-user', email: 'other@example.com' },
+      deviceChecked: false,
+    }));
+    const checkDuplicateSubmission = vi.fn(async () => ({
+      alreadySubmitted: true,
+      responseId: 'response-device',
+    }));
+    const controller = new GatewayBackedParticipantApiController(
+      createGateway({
+        fetchParticipantSurveyAccess,
+        checkDuplicateSubmission,
+      }),
+      new ParticipantPayloadMapper(),
+    );
+
+    await expect(controller.checkAccess({ publicSlug: 'ABC123', participantDeviceId: 'device-1' })).resolves.toMatchObject({
+      status: 'already_submitted',
+      submittedResponseId: 'response-device',
+    });
+
+    expect(checkDuplicateSubmission).toHaveBeenCalledWith({
+      surveyId: 'survey-1',
+      participantUserId: 'other-user',
+      participantDeviceId: 'device-1',
+    });
   });
 });
 
@@ -183,6 +222,7 @@ function createSubmissionCommand(): SubmissionCommand {
   return {
     surveyId: 'survey-1',
     participantUserId: 'user-1',
+    participantDeviceId: 'device-1',
     participantEmail: 'student@example.com',
     locale: 'ko',
     profile: {},

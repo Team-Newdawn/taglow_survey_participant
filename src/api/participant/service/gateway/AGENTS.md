@@ -14,7 +14,7 @@ This directory owns external IO for participant APIs.
 - Define the `ParticipantApiGateway` interface.
 - Provide session/auth IO: `getSession`, `signInWithGoogle`, and `signOut`.
 - Fetch published public survey bundles by public slug from `surveys`, `survey_sections`, `questions`, and `survey_assets`; prefer one embedded PostgREST select so the View receives an HTTP-API-like bundle.
-- Check duplicate submission status.
+- Check duplicate submission status by account and browser device id.
 - Create one `responses` row and many `answers` rows. Call optional `submitSurveyResponse` only when the DB/server actually exposes it.
 - Create signed asset URLs for private storage assets.
 - Upload participant-provided question images through Storage under policy-compatible paths.

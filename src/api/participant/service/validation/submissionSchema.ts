@@ -14,6 +14,7 @@ export const respondentProfileSchema = z.object({
 export const submissionCommandSchema = z.object({
   surveyId: z.string().min(1),
   participantUserId: z.string().min(1),
+  participantDeviceId: z.string().min(8).max(128),
   participantEmail: z.string().email(),
   locale: z.union([z.literal('ko'), z.literal('en')]),
   startedAt: z.string().optional(),

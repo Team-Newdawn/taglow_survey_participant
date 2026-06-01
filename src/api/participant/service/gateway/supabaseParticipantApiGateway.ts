@@ -154,11 +154,31 @@ export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
     };
   }
 
-  async fetchParticipantSurveyAccess(publicSlug: string): Promise<RawParticipantSurveyAccessResult> {
-    const { data, error } = await this.supabase.rpc('get_participant_survey_access', { p_public_identifier: publicSlug });
+  async fetchParticipantSurveyAccess(args: {
+    publicSlug: string;
+    participantDeviceId?: string;
+  }): Promise<RawParticipantSurveyAccessResult> {
+    const rpcParams = args.participantDeviceId
+      ? { p_public_identifier: args.publicSlug, p_device_id: args.participantDeviceId }
+      : { p_public_identifier: args.publicSlug };
+    let data: unknown;
+    let usedDeviceAwareRpc = Boolean(args.participantDeviceId);
 
-    if (error) {
-      throw toParticipantApiError(error, 'UNKNOWN');
+    const response = await this.supabase.rpc('get_participant_survey_access', rpcParams);
+    data = response.data;
+
+    if (response.error) {
+      if (args.participantDeviceId && isRpcSignatureMismatch(response.error)) {
+        const fallbackResponse = await this.supabase.rpc('get_participant_survey_access', { p_public_identifier: args.publicSlug });
+        data = fallbackResponse.data;
+        usedDeviceAwareRpc = false;
+
+        if (fallbackResponse.error) {
+          throw toParticipantApiError(fallbackResponse.error, 'UNKNOWN');
+        }
+      } else {
+        throw toParticipantApiError(response.error, 'UNKNOWN');
+      }
     }
 
     const result = data as Partial<RawParticipantSurveyAccessResult> | null;
@@ -173,29 +193,33 @@ export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
       session: normalizeParticipantSurveyAccessSession(result?.session),
       responseId: typeof result?.responseId === 'string' ? result.responseId : undefined,
       submittedAt: typeof result?.submittedAt === 'string' ? result.submittedAt : undefined,
+      deviceChecked: result?.deviceChecked === true || usedDeviceAwareRpc,
     };
   }
 
   async checkDuplicateSubmission(args: {
     surveyId: string;
     participantUserId: string;
+    participantDeviceId?: string;
   }): Promise<RawDuplicateSubmissionResult> {
-    const { data, error } = await this.supabase
+    const query = this.supabase
       .from('responses')
       .select('id,submitted_at')
       .eq('survey_id', args.surveyId)
-      .eq('participant_user_id', args.participantUserId)
-      .eq('status', 'submitted')
-      .maybeSingle();
+      .eq('status', 'submitted');
+    const { data, error } = await (args.participantDeviceId
+      ? query.or(`participant_user_id.eq.${args.participantUserId},participant_device_id.eq.${args.participantDeviceId}`).limit(1)
+      : query.eq('participant_user_id', args.participantUserId).limit(1));
 
     if (error) {
       throw toParticipantApiError(error, 'UNKNOWN');
     }
+    const firstRow = Array.isArray(data) ? data[0] : data;
 
     return {
-      alreadySubmitted: Boolean(data),
-      responseId: (data as { id?: string } | null)?.id,
-      submittedAt: (data as { submitted_at?: string | null } | null)?.submitted_at ?? undefined,
+      alreadySubmitted: Boolean(firstRow),
+      responseId: (firstRow as { id?: string } | null | undefined)?.id,
+      submittedAt: (firstRow as { submitted_at?: string | null } | null | undefined)?.submitted_at ?? undefined,
     };
   }
 
@@ -367,4 +391,18 @@ function normalizeParticipantSurveyAccessSession(session: unknown): RawParticipa
   const email = record.email;
 
   return typeof userId === 'string' && typeof email === 'string' ? { userId, email } : undefined;
+}
+
+function isRpcSignatureMismatch(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const record = error as Record<string, unknown>;
+  return (
+    record.code === 'PGRST202' ||
+    (typeof record.message === 'string' &&
+      record.message.includes('get_participant_survey_access') &&
+      record.message.includes('p_device_id'))
+  );
 }

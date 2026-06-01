@@ -352,6 +352,7 @@ participant submit RPC: submit_survey_response is not deployed
 - 현재 제출은 submit_survey_response RPC가 아니라 responses insert + answers bulk insert를 사용한다.
 - 정식 런칭 전 transactional submit RPC를 추가하면 SupabaseParticipantApiGateway에 optional submitSurveyResponse를 다시 연결한다.
 - responses RLS는 participant_email lower-case가 auth email과 같은지 검사하므로 client payload는 lower-case email을 저장한다.
+- 기기당 1회 제한은 localStorage device id를 responses.participant_device_id에 저장하고 survey_id + participant_device_id unique index로 검증한다.
 ```
 
 실제 check constraint:
@@ -1454,6 +1455,7 @@ export type SubmissionCommand = Readonly<{
 {
   survey_id: command.surveyId,
   participant_user_id: command.participantUserId,
+  participant_device_id: command.participantDeviceId,
   participant_email: command.participantEmail.toLowerCase(),
   status: 'submitted',
   locale: command.locale,
@@ -1483,6 +1485,19 @@ DB는 다음 unique index를 가진다.
 create unique index uniq_submitted_response_per_user
 on public.responses (survey_id, participant_user_id)
 where status = 'submitted';
+
+create unique index uniq_submitted_response_per_device
+on public.responses (survey_id, participant_device_id)
+where status = 'submitted' and participant_device_id is not null;
+```
+
+프론트 흐름:
+
+```text
+1. 브라우저 localStorage에서 participant device id를 확보한다.
+2. 로그인 후 account/device duplicate query 실행
+3. 이미 submitted response가 있으면 AlreadySubmittedPage 표시
+4. submit 시 unique violation이 발생하면 AlreadySubmittedPage로 이동
 ```
 
 프론트 흐름:

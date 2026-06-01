@@ -7,12 +7,18 @@ export type SignInCommand = Readonly<{
 export type DuplicateSubmissionCommand = Readonly<{
   surveyId: string;
   participantUserId: string;
+  participantDeviceId?: string;
 }>;
 
 export type DuplicateSubmissionResult = Readonly<{
   alreadySubmitted: boolean;
   responseId?: string;
   submittedAt?: string;
+}>;
+
+export type SurveyAccessCommand = Readonly<{
+  publicSlug: string;
+  participantDeviceId?: string;
 }>;
 
 export type AssetUrlCommand = Readonly<{

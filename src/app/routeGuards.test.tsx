@@ -1,12 +1,17 @@
 import { screen, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { createFakeParticipantApiController } from '../test/fakeParticipantApiController';
 import { publishedSurveyFixture } from '../test/fixtures/publicSurveyFixture';
 import { renderWithProviders } from '../test/renderWithProviders';
+import { markSurveySubmittedOnDevice } from '../utils/participantDevice';
 import { AppRoutes } from './router';
 
 describe('participant route guards', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
   it('does not redirect the root route to a demo survey', () => {
     renderWithProviders(<AppRoutes />, {
       route: '/',
@@ -68,6 +73,21 @@ describe('participant route guards', () => {
 
     await waitFor(() => expect(screen.getByText('이미 제출한 설문입니다.')).toBeInTheDocument());
   });
+
+  it('routes same-device participants to already-submitted page before section entry', async () => {
+    markSurveySubmittedOnDevice('fixture-survey');
+
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/intro',
+      controller: createFakeParticipantApiController({
+        session: { userId: 'other-user', email: 'other@example.com' },
+        duplicate: { alreadySubmitted: false },
+      }),
+    });
+
+    await waitFor(() => expect(screen.getByText('이미 제출한 설문입니다.')).toBeInTheDocument());
+  });
+
 
   it('routes closed surveys to closed page', async () => {
     renderWithProviders(<AppRoutes />, {
