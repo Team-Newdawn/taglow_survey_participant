@@ -17,7 +17,20 @@ export function validateAttentionCheck(args: {
   return {
     expectedValue,
     actualValue,
-    passed: expectedValue === undefined || actualValue === expectedValue,
+    passed: expectedValue === undefined || normalizeComparableValue(actualValue) === normalizeComparableValue(expectedValue),
   };
 }
 
+function normalizeComparableValue(value: string | number | undefined): string | number | undefined {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return undefined;
+  }
+
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : trimmed;
+}

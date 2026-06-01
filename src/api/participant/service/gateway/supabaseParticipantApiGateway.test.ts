@@ -82,43 +82,10 @@ describe('SupabaseParticipantApiGateway public survey', () => {
 });
 
 describe('SupabaseParticipantApiGateway submission', () => {
-  it('submits responses through the transactional RPC', async () => {
-    const rpc = vi.fn(async () => ({
-      data: {
-        responseId: 'response-1',
-        submittedAt: '2026-05-31T00:00:00.000Z',
-      },
-      error: null,
-    }));
-    const gateway = new SupabaseParticipantApiGateway({ rpc } as unknown as SupabaseClient);
-    const payload = {
-      response: { survey_id: 'survey-1' },
-      answers: [{ survey_id: 'survey-1', response_id: null, answer_type: 'scale' }],
-      rawPayload: {},
-    };
+  it('does not expose the transactional RPC before the production function is deployed', () => {
+    const gateway = new SupabaseParticipantApiGateway({} as unknown as SupabaseClient);
 
-    await expect(gateway.submitSurveyResponse(payload)).resolves.toEqual({
-      responseId: 'response-1',
-      submittedAt: '2026-05-31T00:00:00.000Z',
-    });
-    expect(rpc).toHaveBeenCalledWith('submit_survey_response', { payload });
-  });
-
-  it('maps duplicate submitted-response failures from the RPC', async () => {
-    const rpc = vi.fn(async () => ({
-      data: null,
-      error: { code: '23505', message: 'duplicate key value violates unique constraint' },
-    }));
-    const gateway = new SupabaseParticipantApiGateway({ rpc } as unknown as SupabaseClient);
-    const payload = {
-      response: { survey_id: 'survey-1' },
-      answers: [],
-      rawPayload: {},
-    };
-
-    await expect(gateway.submitSurveyResponse(payload)).rejects.toMatchObject({
-      code: 'ALREADY_SUBMITTED',
-    });
+    expect('submitSurveyResponse' in gateway).toBe(false);
   });
 
   it('does not ask Supabase to return inserted answer rows on the fallback path', async () => {

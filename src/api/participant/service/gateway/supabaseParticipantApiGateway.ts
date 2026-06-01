@@ -15,8 +15,6 @@ import type {
   RawResponse,
   RawSectionRow,
   RawSession,
-  RawSubmitSurveyPayload,
-  RawSubmitSurveyResult,
   RawSurveyRow,
 } from './participantApiGateway';
 
@@ -227,24 +225,6 @@ export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
     }
 
     return [];
-  }
-
-  async submitSurveyResponse(payload: RawSubmitSurveyPayload): Promise<RawSubmitSurveyResult> {
-    const { data, error } = await this.supabase.rpc('submit_survey_response', { payload });
-
-    if (error) {
-      throw toParticipantApiError(error, 'SUBMISSION_FAILED');
-    }
-
-    const result = data as Partial<RawSubmitSurveyResult> | null;
-    if (!result?.responseId) {
-      throw new ParticipantApiError('SUBMISSION_FAILED', 'Survey submission did not return a response id.');
-    }
-
-    return {
-      responseId: result.responseId,
-      submittedAt: result.submittedAt,
-    };
   }
 
   async createSignedAssetUrl(args: { bucket: string; path: string }): Promise<string> {

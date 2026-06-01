@@ -61,6 +61,40 @@ describe('buildSubmissionAnswers', () => {
     ]);
   });
 
+  it('stores numeric attention check answers as attention_check rows with score metadata', () => {
+    const attentionQuestion = {
+      ...publishedSurveyFixture.sections[1].questions[0],
+      id: 'question-attention',
+      questionKey: 'attention_check',
+      questionType: 'attention_check' as const,
+      metricType: 'none' as const,
+      config: { expectedValue: '3' },
+    };
+    const survey = {
+      ...publishedSurveyFixture,
+      sections: [
+        {
+          ...publishedSurveyFixture.sections[1],
+          questions: [attentionQuestion],
+        },
+      ],
+    };
+
+    expect(buildSubmissionAnswers(survey, { 'question-attention': 3 })).toEqual([
+      expect.objectContaining({
+        questionId: 'question-attention',
+        answerType: 'attention_check',
+        scoreValue: 3,
+        choiceValue: undefined,
+        valueJson: {
+          expectedValue: '3',
+          actualValue: 3,
+          passed: true,
+        },
+      }),
+    ]);
+  });
+
   it('aggregates individual profile question answers into respondent profile columns', () => {
     const profileSurvey = {
       ...publishedSurveyFixture,

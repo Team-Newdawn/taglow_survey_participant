@@ -54,6 +54,26 @@ describe('GatewayBackedParticipantApiController submission', () => {
       code: 'ALREADY_SUBMITTED',
     });
   });
+
+  it('falls back to response insert plus answer bulk insert when the gateway has no submit RPC', async () => {
+    const createResponse = vi.fn(async () => ({ id: 'response-fallback', submitted_at: '2026-05-31T00:00:00.000Z' }));
+    const createAnswers = vi.fn(async () => []);
+    const controller = new GatewayBackedParticipantApiController(
+      createGateway({
+        createResponse,
+        createAnswers,
+      }),
+      new ParticipantPayloadMapper(),
+    );
+
+    await expect(controller.submitSurvey(createSubmissionCommand())).resolves.toEqual({
+      responseId: 'response-fallback',
+      submittedAt: '2026-05-31T00:00:00.000Z',
+    });
+
+    expect(createResponse).toHaveBeenCalledWith(expect.objectContaining({ survey_id: 'survey-1' }));
+    expect(createAnswers).toHaveBeenCalledWith([expect.objectContaining({ response_id: 'response-fallback' })]);
+  });
 });
 
 describe('GatewayBackedParticipantApiController access', () => {
