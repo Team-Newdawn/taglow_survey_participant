@@ -83,6 +83,7 @@ export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
         id,
         title,
         description,
+        description_en,
         status,
         public_slug,
         public_code,

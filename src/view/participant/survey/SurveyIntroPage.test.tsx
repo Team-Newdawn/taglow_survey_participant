@@ -1,8 +1,10 @@
 import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { AppRoutes } from '../../../app/router';
 import { useParticipantDraftStore } from '../../../store/participantDraftStore';
+import { useParticipantLocaleStore } from '../../../store/participantLocaleStore';
 import { useParticipantProgressStore } from '../../../store/participantProgressStore';
 import { createFakeParticipantApiController } from '../../../test/fakeParticipantApiController';
 import { publishedSurveyFixture } from '../../../test/fixtures/publicSurveyFixture';
@@ -12,6 +14,7 @@ describe('SurveyIntroPage', () => {
   beforeEach(() => {
     window.localStorage.clear();
     useParticipantDraftStore.getState().clearDraftValues();
+    useParticipantLocaleStore.getState().setLocale('ko');
     useParticipantProgressStore.getState().resetProgress();
   });
 
@@ -58,5 +61,66 @@ describe('SurveyIntroPage', () => {
 
     const wwwLink = screen.getByRole('link', { name: 'www.newdawn.co.kr/contact' });
     expect(wwwLink).toHaveAttribute('href', 'https://www.newdawn.co.kr/contact');
+  });
+
+  it('switches the survey intro description to English when the English version exists', async () => {
+    const survey = {
+      ...publishedSurveyFixture,
+      sections: [
+        {
+          id: 'section-intro',
+          surveyId: 'survey-1',
+          sectionKey: 'intro',
+          title: { ko: '설문 안내', en: 'Survey guide' },
+          description: {
+            ko: '한국어 설문 소개입니다.',
+            en: 'This is the English survey introduction.',
+          },
+          orderIndex: -1,
+          sectionType: 'intro',
+          settings: {},
+          questions: [],
+        },
+        ...publishedSurveyFixture.sections,
+      ],
+    };
+
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/intro',
+      controller: createFakeParticipantApiController({ survey }),
+    });
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: '생활관 정기 설문조사' })).toBeInTheDocument());
+    expect(screen.getByText('한국어 설문 소개입니다.')).toBeInTheDocument();
+    expect(document.querySelector('.survey-intro-page__sections')).not.toHaveTextContent('설문 안내');
+
+    await userEvent.click(screen.getByRole('button', { name: 'English' }));
+
+    expect(screen.getByRole('heading', { name: 'Dormitory Survey' })).toBeInTheDocument();
+    expect(screen.getByText('This is the English survey introduction.')).toBeInTheDocument();
+    expect(screen.queryByText('한국어 설문 소개입니다.')).not.toBeInTheDocument();
+    expect(document.querySelector('.survey-intro-page__sections')).not.toHaveTextContent('Survey guide');
+  });
+
+  it('uses the survey English description when the English locale is selected', async () => {
+    const survey = {
+      ...publishedSurveyFixture,
+      description: {
+        ko: '한국어 설문 설명입니다.',
+        en: 'This is the English survey description.',
+      },
+    };
+
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/intro',
+      controller: createFakeParticipantApiController({ survey }),
+    });
+
+    await waitFor(() => expect(screen.getByText('한국어 설문 설명입니다.')).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole('button', { name: 'English' }));
+
+    expect(screen.getByText('This is the English survey description.')).toBeInTheDocument();
+    expect(screen.queryByText('한국어 설문 설명입니다.')).not.toBeInTheDocument();
   });
 });
