@@ -1500,6 +1500,14 @@ where status = 'submitted' and participant_device_id is not null;
 4. submit 시 unique violation이 발생하면 AlreadySubmittedPage로 이동
 ```
 
+프론트 흐름:
+
+```text
+1. 로그인 후 duplicate query 실행
+2. 이미 submitted response가 있으면 AlreadySubmittedPage 표시
+3. submit 시 unique violation이 발생하면 AlreadySubmittedPage로 이동
+```
+
 ---
 
 ## 17. 접근 제어 및 보안
