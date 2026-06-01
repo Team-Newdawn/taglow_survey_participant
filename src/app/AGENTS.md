@@ -14,7 +14,7 @@ This directory owns the React application shell and routing foundation.
 
 - Compose global providers: router, query client, participant API runtime/provider, and any app-wide UI providers.
 - Define public survey routes exactly as described in the TDD unless a later product decision updates them.
-- Implement route guards for survey existence/status, Google-authenticated sessions, and duplicate submission.
+- Implement route guards for survey existence/status, Google-authenticated sessions, and duplicate submission by account/device.
 - Keep redirects stable for public URL and QR entry.
 - Import `src/styles/global.css` once at the app entry or provider shell, never from page/component files.
 

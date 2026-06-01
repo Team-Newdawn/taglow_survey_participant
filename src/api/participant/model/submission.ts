@@ -15,6 +15,7 @@ export type RespondentProfile = Readonly<{
 export type SubmissionCommand = Readonly<{
   surveyId: string;
   participantUserId: string;
+  participantDeviceId: string;
   participantEmail: string;
   locale: Locale;
   startedAt?: string;
@@ -27,4 +28,3 @@ export type SubmissionResult = Readonly<{
   responseId: string;
   submittedAt?: string;
 }>;
-

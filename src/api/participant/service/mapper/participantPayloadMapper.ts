@@ -88,6 +88,7 @@ export class ParticipantPayloadMapper {
     return {
       survey_id: command.surveyId,
       participant_user_id: command.participantUserId,
+      participant_device_id: command.participantDeviceId,
       participant_email: command.participantEmail.toLowerCase(),
       status: 'submitted',
       locale: command.locale,

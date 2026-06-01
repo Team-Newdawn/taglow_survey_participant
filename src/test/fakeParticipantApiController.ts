@@ -62,7 +62,7 @@ export function createFakeParticipantApiController(overrides: FakeControllerOver
 
       return survey;
     },
-    async checkAccess(): Promise<SurveyAccessResult> {
+    async checkAccess(_command): Promise<SurveyAccessResult> {
       if (!session) {
         return { status: 'unauthenticated', survey };
       }

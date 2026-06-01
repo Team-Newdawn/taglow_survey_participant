@@ -6,6 +6,7 @@ import type {
   ParticipantQuestionImageUpload,
   ParticipantQuestionImageUploadCommand,
   SignInCommand,
+  SurveyAccessCommand,
 } from '../model/commands';
 import type { PublicSurvey } from '../model/publicSurvey';
 import type { SubmissionCommand, SubmissionResult } from '../model/submission';
@@ -22,7 +23,7 @@ export interface ParticipantApiController {
   signOut(): Promise<void>;
 
   getPublicSurvey(publicSlug: string): Promise<PublicSurvey>;
-  checkAccess(publicSlug: string): Promise<SurveyAccessResult>;
+  checkAccess(command: SurveyAccessCommand): Promise<SurveyAccessResult>;
   checkDuplicateSubmission(command: DuplicateSubmissionCommand): Promise<DuplicateSubmissionResult>;
 
   getAssetUrl(asset: SurveyAsset): Promise<string>;

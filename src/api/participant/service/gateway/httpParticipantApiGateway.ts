@@ -35,8 +35,12 @@ export class HttpParticipantApiGateway implements ParticipantApiGateway {
   async checkDuplicateSubmission(args: {
     surveyId: string;
     participantUserId: string;
+    participantDeviceId?: string;
   }): Promise<RawDuplicateSubmissionResult> {
     const params = new URLSearchParams({ participantUserId: args.participantUserId });
+    if (args.participantDeviceId) {
+      params.set('participantDeviceId', args.participantDeviceId);
+    }
     return this.request<RawDuplicateSubmissionResult>(
       `/api/surveys/${encodeURIComponent(args.surveyId)}/submission-status?${params.toString()}`,
     );

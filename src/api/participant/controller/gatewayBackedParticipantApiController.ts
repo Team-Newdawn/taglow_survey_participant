@@ -49,9 +49,9 @@ export class GatewayBackedParticipantApiController implements ParticipantApiCont
     return this.mapper.toPublicSurvey(bundle);
   }
 
-  async checkAccess(publicSlug: string): Promise<SurveyAccessResult> {
+  async checkAccess(command: { publicSlug: string; participantDeviceId?: string }): Promise<SurveyAccessResult> {
     if (this.gateway.fetchParticipantSurveyAccess) {
-      const raw = await this.gateway.fetchParticipantSurveyAccess(publicSlug);
+      const raw = await this.gateway.fetchParticipantSurveyAccess(command);
       const survey = raw.survey
         ? this.mapper.toPublicSurvey({
             survey: raw.survey,
@@ -60,11 +60,29 @@ export class GatewayBackedParticipantApiController implements ParticipantApiCont
             assets: raw.assets ?? [],
           })
         : undefined;
+      const session = raw.session;
+
+      if (raw.status === 'allowed' && survey && session && command.participantDeviceId && !raw.deviceChecked) {
+        const duplicate = await this.checkDuplicateSubmission({
+          surveyId: survey.id,
+          participantUserId: session.userId,
+          participantDeviceId: command.participantDeviceId,
+        });
+
+        if (duplicate.alreadySubmitted) {
+          return {
+            status: 'already_submitted',
+            survey,
+            session,
+            submittedResponseId: duplicate.responseId,
+          };
+        }
+      }
 
       return {
         status: raw.status,
         survey,
-        session: raw.session,
+        session,
         submittedResponseId: raw.responseId,
       };
     }
@@ -72,7 +90,7 @@ export class GatewayBackedParticipantApiController implements ParticipantApiCont
     let survey: PublicSurvey;
 
     try {
-      survey = await this.getPublicSurvey(publicSlug);
+      survey = await this.getPublicSurvey(command.publicSlug);
     } catch (error) {
       if (isParticipantApiError(error) && error.code === 'SURVEY_NOT_FOUND') {
         return { status: 'survey_not_found' };
@@ -93,6 +111,7 @@ export class GatewayBackedParticipantApiController implements ParticipantApiCont
     const duplicate = await this.checkDuplicateSubmission({
       surveyId: survey.id,
       participantUserId: session.userId,
+      participantDeviceId: command.participantDeviceId,
     });
 
     if (duplicate.alreadySubmitted) {
@@ -111,6 +130,7 @@ export class GatewayBackedParticipantApiController implements ParticipantApiCont
     const raw = await this.gateway.checkDuplicateSubmission({
       surveyId: command.surveyId,
       participantUserId: command.participantUserId,
+      participantDeviceId: command.participantDeviceId,
     });
 
     return {

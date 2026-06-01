@@ -14,6 +14,7 @@ import { useParticipantLocaleStore } from '../../../store/participantLocaleStore
 import { useParticipantProgressStore } from '../../../store/participantProgressStore';
 import { buildSubmissionAnswers, extractRespondentProfile, findMissingRequiredQuestions } from '../../../utils/answerNormalizer';
 import { readLocalizedText, resolveSurveyDefaultLocale } from '../../../utils/i18nText';
+import { getOrCreateParticipantDeviceId, markSurveySubmittedOnDevice } from '../../../utils/participantDevice';
 import { getAnswerSections } from './surveySections';
 import { getSurveyLocaleCopy } from './surveyLocaleCopy';
 import './css/SurveyReviewPage.css';
@@ -65,12 +66,14 @@ export function SurveyReviewPage() {
       await submitMutation.mutateAsync({
         surveyId: survey.id,
         participantUserId: session.userId,
+        participantDeviceId: getOrCreateParticipantDeviceId(),
         participantEmail: session.email,
         locale: displayLocale,
         profile: extractRespondentProfile(survey, values),
         answers: submissionAnswers,
         rawPayload: values,
       });
+      markSurveySubmittedOnDevice(publicSlug);
       await draftStorage.removeDraft({ surveyId: survey.id, participantUserId: session.userId });
       clearDraftValues();
       navigate(`/survey/${publicSlug}/complete`);

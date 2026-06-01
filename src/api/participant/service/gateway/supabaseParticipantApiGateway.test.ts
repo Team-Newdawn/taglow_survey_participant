@@ -117,13 +117,71 @@ describe('SupabaseParticipantApiGateway access', () => {
     }));
     const gateway = new SupabaseParticipantApiGateway({ rpc } as unknown as SupabaseClient);
 
-    await expect(gateway.fetchParticipantSurveyAccess('ABC123')).resolves.toMatchObject({
+    await expect(gateway.fetchParticipantSurveyAccess({ publicSlug: 'ABC123', participantDeviceId: 'device-1' })).resolves.toMatchObject({
       status: 'allowed',
       survey: { id: 'survey-1' },
       sections: [{ id: 'section-1' }],
       session: { userId: 'user-1', email: 'student@example.com' },
+      deviceChecked: true,
     });
-    expect(rpc).toHaveBeenCalledWith('get_participant_survey_access', { p_public_identifier: 'ABC123' });
+    expect(rpc).toHaveBeenCalledWith('get_participant_survey_access', {
+      p_public_identifier: 'ABC123',
+      p_device_id: 'device-1',
+    });
+  });
+
+  it('falls back to the legacy access RPC signature when p_device_id is not deployed yet', async () => {
+    const rpc = vi
+      .fn()
+      .mockResolvedValueOnce({
+        data: null,
+        error: { code: 'PGRST202', message: 'Could not find get_participant_survey_access with p_device_id' },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          status: 'allowed',
+          survey: { id: 'survey-1', status: 'published' },
+          sections: [],
+          questions: [],
+          assets: [],
+          session: { userId: 'user-1', email: 'student@example.com' },
+        },
+        error: null,
+      });
+    const gateway = new SupabaseParticipantApiGateway({ rpc } as unknown as SupabaseClient);
+
+    await expect(gateway.fetchParticipantSurveyAccess({ publicSlug: 'ABC123', participantDeviceId: 'device-1' })).resolves.toMatchObject({
+      status: 'allowed',
+      deviceChecked: false,
+    });
+    expect(rpc).toHaveBeenLastCalledWith('get_participant_survey_access', { p_public_identifier: 'ABC123' });
+  });
+
+  it('checks duplicate submissions by account or device id', async () => {
+    const limit = vi.fn(async () => ({
+      data: [{ id: 'response-device', submitted_at: '2026-06-01T00:00:00.000Z' }],
+      error: null,
+    }));
+    const or = vi.fn(() => ({ limit }));
+    const query = { eq: vi.fn(), or };
+    query.eq.mockReturnValue(query);
+    const select = vi.fn(() => query);
+    const from = vi.fn(() => ({ select }));
+    const gateway = new SupabaseParticipantApiGateway({ from } as unknown as SupabaseClient);
+
+    await expect(
+      gateway.checkDuplicateSubmission({
+        surveyId: 'survey-1',
+        participantUserId: 'user-1',
+        participantDeviceId: 'device-1',
+      }),
+    ).resolves.toEqual({
+      alreadySubmitted: true,
+      responseId: 'response-device',
+      submittedAt: '2026-06-01T00:00:00.000Z',
+    });
+
+    expect(or).toHaveBeenCalledWith('participant_user_id.eq.user-1,participant_device_id.eq.device-1');
   });
 });
 

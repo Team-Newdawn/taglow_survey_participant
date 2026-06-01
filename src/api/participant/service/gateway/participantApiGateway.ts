@@ -90,6 +90,7 @@ export type RawParticipantSurveyAccessResult = Readonly<{
   };
   responseId?: string;
   submittedAt?: string;
+  deviceChecked?: boolean;
 }>;
 
 export type RawDuplicateSubmissionResult = Readonly<{
@@ -135,10 +136,14 @@ export interface ParticipantApiGateway {
   signInWithGoogle(redirectTo: string): Promise<void>;
   signOut(): Promise<void>;
   fetchPublicSurveyBySlug(publicSlug: string): Promise<RawPublicSurveyBundle>;
-  fetchParticipantSurveyAccess?(publicSlug: string): Promise<RawParticipantSurveyAccessResult>;
+  fetchParticipantSurveyAccess?(args: {
+    publicSlug: string;
+    participantDeviceId?: string;
+  }): Promise<RawParticipantSurveyAccessResult>;
   checkDuplicateSubmission(args: {
     surveyId: string;
     participantUserId: string;
+    participantDeviceId?: string;
   }): Promise<RawDuplicateSubmissionResult>;
   createResponse(payload: RawCreateResponsePayload): Promise<RawResponse>;
   createAnswers(payloads: RawCreateAnswerPayload[]): Promise<RawAnswer[]>;
