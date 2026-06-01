@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { SurveyAsset } from '../model/asset';
 import type { SubmissionCommand } from '../model/submission';
+import type { DraftStorage, SurveyDraft } from '../service/draft/draftStorage';
 import { ParticipantApiError } from '../service/gateway/apiErrors';
 import type { ParticipantApiGateway } from '../service/gateway/participantApiGateway';
 import { ParticipantPayloadMapper } from '../service/mapper/participantPayloadMapper';
@@ -129,6 +130,35 @@ describe('GatewayBackedParticipantApiController assets', () => {
   });
 });
 
+describe('GatewayBackedParticipantApiController drafts', () => {
+  it('stores drafts behind the controller using the canonical survey/user key', async () => {
+    const draftStorage = createDraftStorage();
+    const controller = new GatewayBackedParticipantApiController(
+      createGateway({}),
+      new ParticipantPayloadMapper(),
+      draftStorage,
+    );
+    const draft: SurveyDraft = {
+      surveyId: 'survey-1',
+      participantUserId: 'user-1',
+      locale: 'ko',
+      currentSectionId: 'section-1',
+      values: { question1: { scoreValue: 5 } },
+      updatedAt: '2026-05-31T00:00:00.000Z',
+      schemaVersion: 1,
+    };
+
+    await controller.saveSurveyDraft(draft);
+
+    expect(draftStorage.saveDraft).toHaveBeenCalledWith('taglow-survey-draft:survey-1:user-1', draft);
+    await expect(controller.loadSurveyDraft({ surveyId: 'survey-1', participantUserId: 'user-1' })).resolves.toEqual(draft);
+
+    await controller.removeSurveyDraft({ surveyId: 'survey-1', participantUserId: 'user-1' });
+
+    expect(draftStorage.removeDraft).toHaveBeenCalledWith('taglow-survey-draft:survey-1:user-1');
+  });
+});
+
 function createSubmissionCommand(): SubmissionCommand {
   return {
     surveyId: 'survey-1',
@@ -212,5 +242,19 @@ function createGateway(overrides: Partial<ParticipantApiGateway>): ParticipantAp
       };
     },
     ...overrides,
+  };
+}
+
+function createDraftStorage(): DraftStorage {
+  const drafts = new Map<string, SurveyDraft>();
+
+  return {
+    loadDraft: vi.fn(async (key: string) => drafts.get(key) ?? null),
+    saveDraft: vi.fn(async (key: string, draft: SurveyDraft) => {
+      drafts.set(key, draft);
+    }),
+    removeDraft: vi.fn(async (key: string) => {
+      drafts.delete(key);
+    }),
   };
 }

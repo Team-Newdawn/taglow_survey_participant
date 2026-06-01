@@ -9,15 +9,19 @@ import type {
 } from '../model/commands';
 import type { PublicSurvey } from '../model/publicSurvey';
 import type { SubmissionCommand, SubmissionResult } from '../model/submission';
+import { buildDraftKey } from '../../../utils/draftKey';
+import type { DraftStorage, SurveyDraft } from '../service/draft/draftStorage';
+import { LocalStorageDraftStorage } from '../service/draft/localStorageDraftStorage';
 import { ParticipantApiError, isParticipantApiError, toParticipantApiError } from '../service/gateway/apiErrors';
 import type { ParticipantApiGateway } from '../service/gateway/participantApiGateway';
 import { ParticipantPayloadMapper } from '../service/mapper/participantPayloadMapper';
-import type { ParticipantApiController } from './participantApiController';
+import type { ParticipantApiController, SurveyDraftIdentity } from './participantApiController';
 
 export class GatewayBackedParticipantApiController implements ParticipantApiController {
   constructor(
     private readonly gateway: ParticipantApiGateway,
     private readonly mapper: ParticipantPayloadMapper,
+    private readonly draftStorage: DraftStorage = new LocalStorageDraftStorage(),
   ) {}
 
   async getCurrentSession(): Promise<ParticipantSession | null> {
@@ -182,6 +186,21 @@ export class GatewayBackedParticipantApiController implements ParticipantApiCont
 
       throw new ParticipantApiError(apiError.code, apiError.message, error);
     }
+  }
+
+  loadSurveyDraft(identity: SurveyDraftIdentity): Promise<SurveyDraft | null> {
+    return this.draftStorage.loadDraft(buildDraftKey(identity));
+  }
+
+  saveSurveyDraft(draft: SurveyDraft): Promise<void> {
+    return this.draftStorage.saveDraft(
+      buildDraftKey({ surveyId: draft.surveyId, participantUserId: draft.participantUserId }),
+      draft,
+    );
+  }
+
+  removeSurveyDraft(identity: SurveyDraftIdentity): Promise<void> {
+    return this.draftStorage.removeDraft(buildDraftKey(identity));
   }
 }
 

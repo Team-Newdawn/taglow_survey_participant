@@ -1,6 +1,7 @@
 export * from './controller/participantApiController';
 export { ParticipantApiControllerProvider, useParticipantApiController } from './controller/participantApiControllerProvider';
 export { GatewayBackedParticipantApiController } from './controller/gatewayBackedParticipantApiController';
+export { useSurveyDraftStorage } from './controller/useSurveyDraftStorage';
 export * from './model';
 export { participantQueryKeys } from './query/queryKeys';
 export { useAssetUrlQuery } from './query/useAssetUrlQuery';
@@ -15,3 +16,6 @@ export { createParticipantApiRuntime } from './runtime/createParticipantApiRunti
 export { ParticipantApiRuntimeProvider } from './runtime/participantApiRuntime';
 export { ParticipantApiError } from './service/gateway/apiErrors';
 export type { ParticipantApiErrorCode } from './service/gateway/apiErrors';
+export { SURVEY_DRAFT_SCHEMA_VERSION } from './service/draft/draftStorage';
+export type { SurveyDraft } from './service/draft/draftStorage';
+export { shouldShowQuestion } from './service/validation/branchEvaluator';

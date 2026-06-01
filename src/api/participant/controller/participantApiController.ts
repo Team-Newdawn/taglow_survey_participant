@@ -9,6 +9,12 @@ import type {
 } from '../model/commands';
 import type { PublicSurvey } from '../model/publicSurvey';
 import type { SubmissionCommand, SubmissionResult } from '../model/submission';
+import type { SurveyDraft } from '../service/draft/draftStorage';
+
+export type SurveyDraftIdentity = Readonly<{
+  surveyId: string;
+  participantUserId: string;
+}>;
 
 export interface ParticipantApiController {
   getCurrentSession(): Promise<ParticipantSession | null>;
@@ -24,4 +30,8 @@ export interface ParticipantApiController {
   uploadQuestionImage(command: ParticipantQuestionImageUploadCommand): Promise<ParticipantQuestionImageUpload>;
 
   submitSurvey(command: SubmissionCommand): Promise<SubmissionResult>;
+
+  loadSurveyDraft(identity: SurveyDraftIdentity): Promise<SurveyDraft | null>;
+  saveSurveyDraft(draft: SurveyDraft): Promise<void>;
+  removeSurveyDraft(identity: SurveyDraftIdentity): Promise<void>;
 }

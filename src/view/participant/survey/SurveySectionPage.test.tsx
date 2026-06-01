@@ -37,6 +37,17 @@ describe('SurveySectionPage', () => {
     expect(screen.getByRole('button', { name: '5' })).toHaveClass('is-selected');
   });
 
+  it('does not count the intro section in answer section progress', async () => {
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/sections/facility',
+      controller: createFakeParticipantApiController({ survey: buildSurveyWithIntroSection() }),
+    });
+
+    expect(await screen.findByText('세탁실 만족도는 어떤가요?')).toBeInTheDocument();
+    expect(screen.getByText('2/2섹션')).toBeInTheDocument();
+    expect(screen.queryByText('3/3섹션')).not.toBeInTheDocument();
+  });
+
   it('shows image tag questions one by one on their own section screens', async () => {
     const facilitySection = publishedSurveyFixture.sections[1];
     const survey = {
@@ -218,6 +229,26 @@ function buildScaleGroupSurvey() {
           },
         ],
       },
+    ],
+  };
+}
+
+function buildSurveyWithIntroSection() {
+  return {
+    ...publishedSurveyFixture,
+    sections: [
+      {
+        id: 'section-intro',
+        surveyId: 'survey-1',
+        sectionKey: 'intro',
+        title: { ko: '설문 안내' },
+        description: { ko: '응답 전 안내입니다.' },
+        orderIndex: -1,
+        sectionType: 'intro' as const,
+        settings: {},
+        questions: [],
+      },
+      ...publishedSurveyFixture.sections,
     ],
   };
 }
