@@ -1,4 +1,7 @@
 interface:
   display_name: "Release Newdawn Main"
-  short_description: "Open and merge Newdawn main PR"
-  default_prompt: "Use $taglow-release-newdawn-main to open and merge the Team-Newdawn dev-to-main PR."
+  short_description: "Merge Newdawn dev to main"
+  default_prompt: "Use $taglow-release-newdawn-main to open and merge the Team-Newdawn dev-to-main PR after dev has been updated from origin/main."
+
+policy:
+  allow_implicit_invocation: true

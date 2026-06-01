@@ -33,7 +33,7 @@ describe('ParticipantPayloadMapper', () => {
           title_ko: '시설',
           title_en: 'Facilities',
           description_ko: '공간별 만족도를 알려주세요.',
-          description_en: null,
+          description_en: 'Tell us about each space.',
           order_index: 1,
           section_type: 'facility',
           settings: {},
@@ -100,6 +100,7 @@ describe('ParticipantPayloadMapper', () => {
         {
           sectionKey: 'facility',
           title: { ko: '시설', en: 'Facilities' },
+          description: { ko: '공간별 만족도를 알려주세요.', en: 'Tell us about each space.' },
           questions: [
             {
               questionKey: 'laundry-experience',
