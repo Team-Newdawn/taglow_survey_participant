@@ -1,51 +1,42 @@
 ---
 name: taglow-deploy-newdawn-dev
-description: Deploy or publish Taglow Survey participant code from local origin/main to Team-Newdawn/taglow_survey_participant dev while keeping VSCode/local default work connected to origin/main. Use when the user asks to push to Newdawn dev, deploy dev, publish staging, or prepare Newdawn dev before a dev-to-main release.
+description: Deploy or publish Taglow Survey participant code to Team-Newdawn/taglow_survey_participant dev while keeping VSCode/local default work connected to origin/minchanpark. Use when the user asks to deploy to Team-Newdawn dev, push Newdawn dev, publish staging, create a dev-to-main PR for Newdawn, or keep origin as the default remote while using Newdawn as a separate deployment target.
 ---
 
 # Taglow Newdawn Dev Deploy
 
-Use this skill to publish the current local checkout, normally `main` tracking `origin/main`, to `Team-Newdawn/taglow_survey_participant` branch `dev`.
-
-## Flow
-
-```text
-origin/main -> push current commit to newdawn-participant/dev -> PR + merge to newdawn-participant/main -> deploy
-```
+Use this skill to publish the current Taglow participant checkout to `Team-Newdawn/taglow_survey_participant` without changing the local default Git experience.
 
 ## Invariants
 
-- `origin` must point at `https://github.com/minchanpark/taglow_survey_participant.git`.
-- Local `main` should track `origin/main`; this is the VSCode-facing default branch.
+- Keep `origin` pointing at `https://github.com/minchanpark/taglow_survey_participant.git`.
 - Keep Team-Newdawn in a separate remote named `newdawn-participant`.
-- `newdawn-participant` must point at `https://github.com/Team-Newdawn/taglow_survey_participant.git`.
-- Push deployment code to `newdawn-participant/dev`.
+- Push deployment code to `newdawn-participant` branch `dev`.
 - Do not push directly to `newdawn-participant/main`.
-- Do not change branch upstreams or VSCode-facing defaults away from `origin/main`.
-- Treat `newdawn-participant/main` as production.
+- Do not change branch upstreams or VSCode-facing defaults unless the user explicitly asks.
+- Treat `newdawn-participant/main` as production: open a PR from `dev` to `main` when the user asks for production deploy or release.
 - Never force-push unless the user explicitly approves it after seeing the divergence.
 
 ## Preflight
 
-Check remotes, branch, and worktree:
+1. Check remotes:
 
 ```bash
 git remote -v
 git remote get-url origin
 git remote get-url newdawn-participant || git remote add newdawn-participant https://github.com/Team-Newdawn/taglow_survey_participant.git
-git fetch origin
-git fetch newdawn-participant
-git branch --set-upstream-to=origin/main main
+```
+
+2. Confirm `origin` is the personal repo. If it is not, stop and explain before editing remotes.
+
+3. Inspect branch and worktree:
+
+```bash
 git status --short --branch
 git branch -vv
 ```
 
-Stop if:
-
-- `origin` is not `https://github.com/minchanpark/taglow_survey_participant.git`.
-- `newdawn-participant` points anywhere other than `https://github.com/Team-Newdawn/taglow_survey_participant.git`.
-
-If there are uncommitted changes, inspect the diff and either commit the intended changes or ask the user what belongs in the deploy. Do not silently stage unrelated files such as `.DS_Store`.
+If there are uncommitted changes, inspect the diff and either commit the intended changes or ask the user what belongs in the deploy. Do not silently stage unrelated files.
 
 ## Validate
 
@@ -61,10 +52,9 @@ If checks fail, fix the issue or report the blocker. Do not deploy a failing bui
 
 ## Push To Newdawn Dev
 
-Fetch and inspect the deployment branch:
+Fetch and verify that the push will be fast-forward or a clean branch update:
 
 ```bash
-git fetch origin main
 git fetch newdawn-participant main dev
 git log --oneline --decorate --left-right --graph newdawn-participant/dev...HEAD
 ```
@@ -77,24 +67,35 @@ Push the current commit to Newdawn dev without changing local upstream:
 git push newdawn-participant HEAD:dev
 ```
 
-Verify:
+After pushing, verify:
 
 ```bash
 git ls-remote --heads newdawn-participant dev main
 git status --short --branch
 ```
 
-The final status should still show local `main` tracking `origin/main`.
+The final status should still show the user's local branch/upstream as it was before deploy, normally connected to `origin`.
 
 ## Optional PR To Main
 
-When the user asks to release, deploy production, or open a PR to main, use `$taglow-release-newdawn-main`.
+When the user asks to release, deploy production, or open a PR to main:
+
+```bash
+gh pr create \
+  --repo Team-Newdawn/taglow_survey_participant \
+  --base main \
+  --head dev \
+  --title "Deploy participant updates" \
+  --body "Deploys the current dev branch to main after validation."
+```
+
+If a PR already exists, report the existing PR URL instead of creating a duplicate.
 
 ## Final Response
 
 Summarize:
 
-- local branch and upstream
+- current local branch and upstream
 - `origin` URL
 - `newdawn-participant` URL
 - pushed commit SHA

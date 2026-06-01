@@ -1,28 +1,20 @@
 ---
 name: taglow-release-newdawn-main
-description: Create, inspect, and merge the Team-Newdawn/taglow_survey_participant pull request from dev to main for production release after origin/main has been pushed to Newdawn dev. Use when the user asks to release Newdawn main, open a dev-to-main PR, merge Newdawn dev into main, deploy production, or finish the Newdawn release.
+description: Create, inspect, and merge the Team-Newdawn/taglow_survey_participant pull request from dev to main for production release while keeping origin/minchanpark as the local default remote. Use when the user asks to release Newdawn main, open a dev-to-main PR, merge dev into main, deploy production, or finish the Newdawn release after dev has been pushed.
 ---
 
 # Taglow Newdawn Main Release
 
 Use this skill to promote `Team-Newdawn/taglow_survey_participant` from `dev` to `main` through a pull request. This is the production release step after `$taglow-deploy-newdawn-dev`.
 
-## Flow
-
-```text
-origin/main -> newdawn-participant/dev -> PR + merge -> newdawn-participant/main -> deploy
-```
-
 ## Invariants
 
-- `origin` must point at `https://github.com/minchanpark/taglow_survey_participant.git`.
-- Local `main` should track `origin/main`; this is the VSCode-facing default branch.
+- Keep `origin` pointing at `https://github.com/minchanpark/taglow_survey_participant.git`.
 - Keep Team-Newdawn in a separate remote named `newdawn-participant`.
-- `newdawn-participant` must point at `https://github.com/Team-Newdawn/taglow_survey_participant.git`.
 - Treat `newdawn-participant/main` as production.
 - Never push directly to `newdawn-participant/main`.
 - Merge only through a GitHub PR from `dev` to `main`.
-- Do not change local branch upstreams or VSCode-facing Git defaults away from `origin/main`.
+- Do not change local branch upstreams or VSCode-facing Git defaults.
 - Do not force-push or bypass branch protection.
 
 ## Preflight
@@ -35,11 +27,7 @@ gh auth status
 git remote -v
 git remote get-url origin
 git remote get-url newdawn-participant || git remote add newdawn-participant https://github.com/Team-Newdawn/taglow_survey_participant.git
-git fetch origin
-git fetch newdawn-participant
-git branch --set-upstream-to=origin/main main
 gh repo view Team-Newdawn/taglow_survey_participant --json defaultBranchRef,nameWithOwner,url
-git status --short --branch
 ```
 
 Stop if:
@@ -47,7 +35,7 @@ Stop if:
 - `origin` is not `https://github.com/minchanpark/taglow_survey_participant.git`.
 - `newdawn-participant` points anywhere other than `https://github.com/Team-Newdawn/taglow_survey_participant.git`.
 - `gh auth status` is not authenticated.
-- The Newdawn default branch is not `main`.
+- The default branch is not `main`.
 
 ## Inspect Diff
 
@@ -59,7 +47,7 @@ git log --oneline --decorate --left-right --graph newdawn-participant/main...new
 git diff --stat newdawn-participant/main...newdawn-participant/dev
 ```
 
-If there are no commits on Newdawn `dev` ahead of Newdawn `main`, report that there is nothing to release and stop.
+If there are no commits on `dev` ahead of `main`, report that there is nothing to release and stop.
 
 If the log shows commits on `main` that are not in `dev`, do not stop solely for that reason. Previous PR merge commits can make `main` appear ahead while the content diff is still clean. Note the divergence, continue to PR inspection, and let GitHub's mergeability state decide. Stop only if the PR reports conflicts or branch protection blockers.
 
@@ -137,7 +125,7 @@ gh pr view <number-or-url> --repo Team-Newdawn/taglow_survey_participant --json 
 git status --short --branch
 ```
 
-Local status should still show `main` tracking `origin/main`.
+Local status should still show the user's local branch/upstream connected to `origin`, not `newdawn-participant`.
 
 ## Final Response
 
