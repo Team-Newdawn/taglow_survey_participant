@@ -1,5 +1,7 @@
 import type { Locale } from '../../model/publicSurvey';
 
+export const SURVEY_DRAFT_SCHEMA_VERSION = 1;
+
 export type SurveyDraft = Readonly<{
   surveyId: string;
   participantUserId: string;
@@ -32,4 +34,3 @@ export function isSurveyDraft(value: unknown): value is SurveyDraft {
     draft.values !== null
   );
 }
-

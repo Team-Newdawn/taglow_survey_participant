@@ -26,7 +26,7 @@ This directory owns TanStack Query hooks for participant server state.
 - Do not perform React Hook Form validation here; call validated commands.
 - Keep query keys aligned with TDD v2: session, public survey by slug, duplicate by survey/user, asset URL by asset id.
 - Include the current auth scope in public survey query keys and wait for session hydration before fetching; Supabase RLS can hide survey rows from anonymous clients.
-- `useSubmissionMutation` success deletes draft and navigates to complete; unique violation should route to already-submitted.
+- `useSubmissionMutation` owns only the submit mutation. Draft cleanup should go through the participant controller/draft hook after successful submit, and route navigation stays in the page.
 
 ## Performance Rules
 

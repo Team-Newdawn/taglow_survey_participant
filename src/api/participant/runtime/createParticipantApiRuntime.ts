@@ -4,6 +4,7 @@ import type { ParticipantApiController } from '../controller/participantApiContr
 import { HttpParticipantApiGateway } from '../service/gateway/httpParticipantApiGateway';
 import type { ParticipantApiGateway } from '../service/gateway/participantApiGateway';
 import { createSupabaseParticipantApiGateway } from '../service/gateway/supabaseParticipantApiGateway';
+import { LocalStorageDraftStorage } from '../service/draft/localStorageDraftStorage';
 import { ParticipantPayloadMapper } from '../service/mapper/participantPayloadMapper';
 
 export type ParticipantApiRuntime = Readonly<{
@@ -22,6 +23,7 @@ export function getParticipantApiRuntime(): ParticipantApiRuntime {
 export function createParticipantApiRuntime(): ParticipantApiRuntime {
   const config = readEnvConfig();
   const mapper = new ParticipantPayloadMapper();
+  const draftStorage = new LocalStorageDraftStorage();
   const gateway =
     config.participantApiMode === 'http'
       ? new HttpParticipantApiGateway(config.participantApiBaseUrl ?? '')
@@ -33,6 +35,6 @@ export function createParticipantApiRuntime(): ParticipantApiRuntime {
   return {
     gateway,
     mapper,
-    controller: new GatewayBackedParticipantApiController(gateway, mapper),
+    controller: new GatewayBackedParticipantApiController(gateway, mapper, draftStorage),
   };
 }

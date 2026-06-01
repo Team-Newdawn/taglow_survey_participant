@@ -1,16 +1,20 @@
-import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { ParticipantApiError, useParticipantSessionQuery, usePublicSurveyQuery, useSubmissionMutation } from '../../../api/participant';
-import { LocalStorageDraftStorage } from '../../../api/participant/service/draft/localStorageDraftStorage';
+import {
+  ParticipantApiError,
+  useParticipantSessionQuery,
+  usePublicSurveyQuery,
+  useSubmissionMutation,
+  useSurveyDraftStorage,
+} from '../../../api/participant';
 import { Button, ButtonLink } from '../../../components/Button';
 import { Message } from '../../../components/Message';
 import { useParticipantDraftStore } from '../../../store/participantDraftStore';
 import { useParticipantLocaleStore } from '../../../store/participantLocaleStore';
 import { useParticipantProgressStore } from '../../../store/participantProgressStore';
 import { buildSubmissionAnswers, extractRespondentProfile, findMissingRequiredQuestions } from '../../../utils/answerNormalizer';
-import { buildDraftKey } from '../../../utils/draftKey';
 import { readLocalizedText, resolveSurveyDefaultLocale } from '../../../utils/i18nText';
+import { getAnswerSections } from './surveySections';
 import { getSurveyLocaleCopy } from './surveyLocaleCopy';
 import './css/SurveyReviewPage.css';
 
@@ -25,7 +29,7 @@ export function SurveyReviewPage() {
   const { values, clearDraftValues } = useParticipantDraftStore();
   const { locale } = useParticipantLocaleStore();
   const { setReviewVisited } = useParticipantProgressStore();
-  const storage = useMemo(() => new LocalStorageDraftStorage(), []);
+  const draftStorage = useSurveyDraftStorage();
   const defaultLocale = resolveSurveyDefaultLocale(survey);
   const displayLocale = locale ?? defaultLocale;
   const copy = getSurveyLocaleCopy(displayLocale);
@@ -34,7 +38,9 @@ export function SurveyReviewPage() {
     return null;
   }
 
-  const missingBySection = survey.sections.map((section) => ({
+  const answerSections = getAnswerSections(survey);
+  const submissionAnswers = buildSubmissionAnswers({ ...survey, sections: answerSections }, values);
+  const missingBySection = answerSections.map((section) => ({
     section,
     missing: findMissingRequiredQuestions(section, values),
   }));
@@ -62,10 +68,10 @@ export function SurveyReviewPage() {
         participantEmail: session.email,
         locale: displayLocale,
         profile: extractRespondentProfile(survey, values),
-        answers: buildSubmissionAnswers(survey, values),
+        answers: submissionAnswers,
         rawPayload: values,
       });
-      await storage.removeDraft(buildDraftKey({ surveyId: survey.id, participantUserId: session.userId }));
+      await draftStorage.removeDraft({ surveyId: survey.id, participantUserId: session.userId });
       clearDraftValues();
       navigate(`/survey/${publicSlug}/complete`);
     } catch (error) {
@@ -94,11 +100,11 @@ export function SurveyReviewPage() {
 
       <section className="survey-review-page__summary">
         <div>
-          <span>{survey.sections.length}</span>
+          <span>{answerSections.length}</span>
           <p>{copy.sectionsSummaryLabel}</p>
         </div>
         <div>
-          <span>{buildSubmissionAnswers(survey, values).length}</span>
+          <span>{submissionAnswers.length}</span>
           <p>{copy.answersSummaryLabel}</p>
         </div>
         <div>

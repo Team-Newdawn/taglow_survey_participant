@@ -1,12 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
 
-import type { PublicQuestion, SurveyAsset } from '../../../api/participant';
 import { useAssetUrlsQuery, useParticipantSessionQuery, usePublicSurveyQuery } from '../../../api/participant';
-import type { SurveyDraft } from '../../../api/participant/service/draft/draftStorage';
-import { LocalStorageDraftStorage } from '../../../api/participant/service/draft/localStorageDraftStorage';
-import { shouldShowQuestion } from '../../../api/participant/service/validation/branchEvaluator';
 import { Button } from '../../../components/Button';
 import { Message } from '../../../components/Message';
 import { StepHeader } from '../../../components/StepHeader';
@@ -14,7 +9,6 @@ import { useParticipantDraftStore } from '../../../store/participantDraftStore';
 import { useParticipantLocaleStore } from '../../../store/participantLocaleStore';
 import { useParticipantProgressStore } from '../../../store/participantProgressStore';
 import { findMissingRequiredQuestions } from '../../../utils/answerNormalizer';
-import { buildDraftKey } from '../../../utils/draftKey';
 import { formatShortDateTime } from '../../../utils/dateTime';
 import { readLocalizedText, resolveSurveyDefaultLocale } from '../../../utils/i18nText';
 import { DraftRestoreBanner } from './components/DraftRestoreBanner';
@@ -22,61 +16,47 @@ import { MultiSelectQuestionGroup } from './components/MultiSelectQuestionGroup'
 import { QuestionRenderer } from './components/QuestionRenderer';
 import { ScaleQuestionGroup } from './components/ScaleQuestionGroup';
 import { buildQuestionRenderBlocks, getQuestionRenderBlockId } from './components/questionRenderBlocks';
+import { findAnswerSectionByKey, getAnswerSections } from './surveySections';
 import { getSurveyLocaleCopy } from './surveyLocaleCopy';
+import { useDraftAutosave } from './useDraftAutosave';
+import { useQuestionScreens } from './useQuestionScreens';
+import { useSectionNavigation } from './useSectionNavigation';
+import { useSectionSurveyForm } from './useSectionSurveyForm';
 import './css/SurveySectionPage.css';
-
-const DRAFT_SCHEMA_VERSION = 1;
-const AUTOSAVE_DELAY_MS = 6500;
 
 export function SurveySectionPage() {
   const { publicSlug = '', sectionKey = '' } = useParams();
-  const navigate = useNavigate();
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const surveyQuery = usePublicSurveyQuery(publicSlug);
   const sessionQuery = useParticipantSessionQuery();
   const survey = surveyQuery.data;
   const session = sessionQuery.data;
-  const section = survey?.sections.find((item) => item.sectionKey === sectionKey) ?? survey?.sections[0];
-  const sectionIndex = survey?.sections.findIndex((item) => item.id === section?.id) ?? 0;
-  const nextSection = survey?.sections[sectionIndex + 1];
-  const previousSection = survey?.sections[sectionIndex - 1];
+  const answerSections = getAnswerSections(survey);
+  const section = findAnswerSectionByKey(survey, sectionKey) ?? answerSections[0];
   const { locale, setLocale } = useParticipantLocaleStore();
   const defaultLocale = resolveSurveyDefaultLocale(survey);
   const displayLocale = locale ?? defaultLocale;
   const { values, setValues, setDraftStatus, setLastSavedAt, hydrateDraft, setRestoreDraftUpdatedAt } = useParticipantDraftStore();
   const { setCurrentSectionKey, markSectionCompleted } = useParticipantProgressStore();
   const [missingQuestionIds, setMissingQuestionIds] = useState<string[]>([]);
-  const [restoreDraft, setRestoreDraft] = useState<SurveyDraft | null>(null);
   const [questionScreenIndex, setQuestionScreenIndex] = useState(0);
-  const storage = useMemo(() => new LocalStorageDraftStorage(), []);
-  const form = useForm<Record<string, unknown>>({ defaultValues: values });
-
-  const saveDraft = useCallback(async () => {
-    if (!survey || !session || !section) {
-      return;
-    }
-
-    const formValues = form.getValues();
-    const draft: SurveyDraft = {
-      surveyId: survey.id,
-      participantUserId: session.userId,
-      locale: displayLocale,
-      currentSectionId: section.id,
-      values: formValues,
-      updatedAt: new Date().toISOString(),
-      schemaVersion: DRAFT_SCHEMA_VERSION,
-    };
-
-    try {
-      setDraftStatus('saving');
-      await storage.saveDraft(buildDraftKey({ surveyId: survey.id, participantUserId: session.userId }), draft);
-      setValues(formValues);
-      setLastSavedAt(draft.updatedAt);
-      setDraftStatus('saved');
-    } catch {
-      setDraftStatus('error');
-    }
-  }, [displayLocale, form, section, session, setDraftStatus, setLastSavedAt, setValues, storage, survey]);
+  const form = useSectionSurveyForm({
+    values,
+    onValuesChange: setValues,
+    onDirty: () => setDraftStatus('idle'),
+  });
+  const { restoreDraft, setRestoreDraft, saveDraft, removeDraft } = useDraftAutosave({
+    survey,
+    session,
+    section,
+    displayLocale,
+    form,
+    values,
+    setValues,
+    setDraftStatus,
+    setLastSavedAt,
+    setRestoreDraftUpdatedAt,
+  });
 
   useEffect(() => {
     setCurrentSectionKey(section?.sectionKey);
@@ -88,79 +68,38 @@ export function SurveySectionPage() {
     scrollElementToTop(bodyRef.current);
   }, [section?.id]);
 
-  useEffect(() => {
-    const subscription = form.watch((nextValues, info) => {
-      if (!info.name) {
-        return;
-      }
-
-      setValues(nextValues as Record<string, unknown>);
-      setDraftStatus('idle');
-    });
-
-    return () => subscription.unsubscribe();
-  }, [form, setDraftStatus, setValues]);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void saveDraft();
-    }, AUTOSAVE_DELAY_MS);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [saveDraft, values]);
-
-  useEffect(() => {
-    if (!survey || !session || Object.keys(values).length > 0) {
-      return;
-    }
-
-    void storage.loadDraft(buildDraftKey({ surveyId: survey.id, participantUserId: session.userId })).then((loadedDraft) => {
-      if (loadedDraft?.schemaVersion === DRAFT_SCHEMA_VERSION) {
-        setRestoreDraft(loadedDraft);
-        setRestoreDraftUpdatedAt(loadedDraft.updatedAt);
-      }
-    });
-  }, [session, setRestoreDraftUpdatedAt, storage, survey, values]);
-
-  useEffect(() => {
-    const saveOnHidden = () => {
-      if (document.visibilityState === 'hidden') {
-        void saveDraft();
-      }
-    };
-    const saveOnUnload = () => {
-      void saveDraft();
-    };
-
-    document.addEventListener('visibilitychange', saveOnHidden);
-    window.addEventListener('beforeunload', saveOnUnload);
-
-    return () => {
-      document.removeEventListener('visibilitychange', saveOnHidden);
-      window.removeEventListener('beforeunload', saveOnUnload);
-    };
-  }, [saveDraft]);
-
-  const visibleQuestions = section?.questions.filter((question) => shouldShowQuestion({ question, values })) ?? [];
-  const questionScreens = buildQuestionScreens(visibleQuestions);
-  const activeQuestionScreenIndex = Math.min(questionScreenIndex, Math.max(questionScreens.length - 1, 0));
-  const currentQuestionScreen = questionScreens[activeQuestionScreenIndex] ?? [];
-  const currentScreenAssets = resolveQuestionAssets(survey?.assets ?? [], currentQuestionScreen);
+  const { visibleQuestions, questionScreens, activeQuestionScreenIndex, currentQuestionScreen, currentScreenAssets } = useQuestionScreens({
+    section,
+    assets: survey?.assets ?? [],
+    values,
+    questionScreenIndex,
+  });
   const currentScreenAssetUrlsQuery = useAssetUrlsQuery(currentScreenAssets);
   const copy = getSurveyLocaleCopy(displayLocale);
+  const visibleRenderBlocks = buildQuestionRenderBlocks(visibleQuestions);
+  const currentRenderBlocks = buildQuestionRenderBlocks(currentQuestionScreen);
+  const renderBlockNumberById = new Map(visibleRenderBlocks.map((block, index) => [getQuestionRenderBlockId(block), index + 1] as const));
+  const missingQuestions = section
+    ? findMissingRequiredQuestions(section, form.getValues()).filter((question) =>
+        currentQuestionScreen.some((visibleQuestion) => visibleQuestion.id === question.id),
+      )
+    : [];
+  const { sectionIndex, nextSection, hasNextQuestionScreen, goNext, goPrevious } = useSectionNavigation({
+    publicSlug,
+    section,
+    answerSections,
+    activeQuestionScreenIndex,
+    questionScreenCount: questionScreens.length,
+    setQuestionScreenIndex,
+    missingQuestions,
+    setMissingQuestionIds,
+    markSectionCompleted,
+    saveDraft,
+  });
 
   if (!survey || !section) {
     return null;
   }
-
-  const hasPreviousQuestionScreen = activeQuestionScreenIndex > 0;
-  const hasNextQuestionScreen = activeQuestionScreenIndex < questionScreens.length - 1;
-  const visibleRenderBlocks = buildQuestionRenderBlocks(visibleQuestions);
-  const currentRenderBlocks = buildQuestionRenderBlocks(currentQuestionScreen);
-  const renderBlockNumberById = new Map(visibleRenderBlocks.map((block, index) => [getQuestionRenderBlockId(block), index + 1] as const));
-  const missingQuestions = findMissingRequiredQuestions(section, form.getValues()).filter((question) =>
-    currentQuestionScreen.some((visibleQuestion) => visibleQuestion.id === question.id),
-  );
 
   const restoreCurrentDraft = () => {
     if (!restoreDraft) {
@@ -179,52 +118,19 @@ export function SurveySectionPage() {
   };
 
   const discardRestoreDraft = async () => {
-    if (survey && session) {
-      await storage.removeDraft(buildDraftKey({ surveyId: survey.id, participantUserId: session.userId }));
-    }
+    await removeDraft();
     setRestoreDraft(null);
-  };
-
-  const goNext = async () => {
-    if (missingQuestions.length > 0) {
-      setMissingQuestionIds(missingQuestions.map((question) => question.id));
-      return;
-    }
-
-    setMissingQuestionIds([]);
-
-    if (hasNextQuestionScreen) {
-      await saveDraft();
-      setQuestionScreenIndex(activeQuestionScreenIndex + 1);
-      return;
-    }
-
-    markSectionCompleted(section.id);
-    await saveDraft();
-    navigate(nextSection ? `/survey/${publicSlug}/sections/${nextSection.sectionKey}` : `/survey/${publicSlug}/review`);
-  };
-
-  const goPrevious = async () => {
-    if (hasPreviousQuestionScreen) {
-      setMissingQuestionIds([]);
-      await saveDraft();
-      setQuestionScreenIndex(activeQuestionScreenIndex - 1);
-      return;
-    }
-
-    await saveDraft();
-    navigate(previousSection ? `/survey/${publicSlug}/sections/${previousSection.sectionKey}` : `/survey/${publicSlug}/intro`);
   };
 
   return (
     <main className="survey-section-page">
       <StepHeader
-        eyebrow={`${sectionIndex + 1}/${survey.sections.length}`}
+        eyebrow={`${sectionIndex + 1}/${answerSections.length}`}
         title={readLocalizedText(section.title, displayLocale, defaultLocale)}
         description={section.description ? readLocalizedText(section.description, displayLocale, defaultLocale) : undefined}
         current={sectionIndex + 1}
-        total={survey.sections.length}
-        progressLabel={copy.sectionProgress(sectionIndex + 1, survey.sections.length)}
+        total={answerSections.length}
+        progressLabel={copy.sectionProgress(sectionIndex + 1, answerSections.length)}
       />
 
       <div ref={bodyRef} className="survey-section-page__body">
@@ -313,57 +219,11 @@ export function SurveySectionPage() {
   );
 }
 
-function buildQuestionScreens(questions: PublicQuestion[]): PublicQuestion[][] {
-  return questions.reduce<PublicQuestion[][]>((screens, question) => {
-    if (isImageTagQuestion(question)) {
-      screens.push([question]);
-      return screens;
-    }
-
-    const previousScreen = screens.at(-1);
-    const shouldAppendToPrevious = previousScreen && previousScreen.every((item) => !isImageTagQuestion(item));
-
-    if (shouldAppendToPrevious) {
-      previousScreen.push(question);
-      return screens;
-    }
-
-    screens.push([question]);
-    return screens;
-  }, []);
-}
-
-function isImageTagQuestion(question: PublicQuestion): boolean {
-  return question.questionType === 'image_tag' || question.questionType === 'participant_image_tag';
-}
-
 function readGroupTitle(
   block: Extract<ReturnType<typeof buildQuestionRenderBlocks>[number], { type: 'scale_group' | 'multi_select_group' }>,
   locale: 'ko' | 'en',
 ): string {
   return locale === 'en' && block.groupTitleEn ? block.groupTitleEn : block.groupTitle;
-}
-
-function resolveQuestionAssets(assets: SurveyAsset[], questions: PublicQuestion[]): SurveyAsset[] {
-  const assetById = new Map(assets.map((asset) => [asset.id, asset] as const));
-  const resolved = new Map<string, SurveyAsset>();
-
-  for (const question of questions) {
-    if (question.questionType !== 'image_tag') {
-      continue;
-    }
-
-    const configAssetId = typeof question.config.assetId === 'string' ? question.config.assetId : undefined;
-    const asset =
-      (configAssetId ? assetById.get(configAssetId) : undefined) ??
-      assets.find((item) => item.questionId === question.id || item.sectionId === question.sectionId);
-
-    if (asset) {
-      resolved.set(asset.id, asset);
-    }
-  }
-
-  return Array.from(resolved.values());
 }
 
 function scrollElementToTop(element: HTMLElement | null): void {

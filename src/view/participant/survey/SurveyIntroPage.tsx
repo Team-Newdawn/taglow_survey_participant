@@ -1,28 +1,27 @@
 import type { ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import {
+  SURVEY_DRAFT_SCHEMA_VERSION,
+  useSurveyDraftStorage,
   useParticipantSessionQuery,
   usePublicSurveyQuery,
   type PublicSurvey,
-  type PublicSurveySection,
+  type SurveyDraft,
 } from '../../../api/participant';
-import type { SurveyDraft } from '../../../api/participant/service/draft/draftStorage';
-import { LocalStorageDraftStorage } from '../../../api/participant/service/draft/localStorageDraftStorage';
 import { Button } from '../../../components/Button';
 import { Message } from '../../../components/Message';
 import { useParticipantDraftStore } from '../../../store/participantDraftStore';
 import { useParticipantLocaleStore } from '../../../store/participantLocaleStore';
 import { useParticipantProgressStore } from '../../../store/participantProgressStore';
-import { buildDraftKey } from '../../../utils/draftKey';
 import { formatShortDateTime } from '../../../utils/dateTime';
 import { readLocalizedText, resolveSurveyDefaultLocale } from '../../../utils/i18nText';
 import { DraftRestoreBanner } from './components/DraftRestoreBanner';
+import { getAnswerSections, isIntroSection } from './surveySections';
 import { getSurveyLocaleCopy } from './surveyLocaleCopy';
 import './css/SurveyIntroPage.css';
 
-const DRAFT_SCHEMA_VERSION = 1;
 const URL_PATTERN = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+)/gi;
 
 export function SurveyIntroPage() {
@@ -34,13 +33,13 @@ export function SurveyIntroPage() {
   const { hydrateDraft, clearDraftValues, setRestoreDraftUpdatedAt } = useParticipantDraftStore();
   const { setCurrentSectionKey, resetProgress } = useParticipantProgressStore();
   const [draft, setDraft] = useState<SurveyDraft | null>(null);
+  const draftStorage = useSurveyDraftStorage();
   const survey = surveyQuery.data;
   const session = sessionQuery.data;
   const defaultLocale = resolveSurveyDefaultLocale(survey);
   const displayLocale = locale ?? defaultLocale;
-  const answerSections = survey?.sections.filter((section) => !isIntroSection(section)) ?? [];
+  const answerSections = getAnswerSections(survey);
   const firstSection = answerSections[0];
-  const storage = useMemo(() => new LocalStorageDraftStorage(), []);
   const copy = getSurveyLocaleCopy(displayLocale);
 
   useEffect(() => {
@@ -48,16 +47,15 @@ export function SurveyIntroPage() {
       return;
     }
 
-    const draftKey = buildDraftKey({ surveyId: survey.id, participantUserId: session.userId });
-    void storage.loadDraft(draftKey).then((loadedDraft) => {
-      if (!loadedDraft || loadedDraft.schemaVersion !== DRAFT_SCHEMA_VERSION) {
+    void draftStorage.loadDraft({ surveyId: survey.id, participantUserId: session.userId }).then((loadedDraft) => {
+      if (!loadedDraft || loadedDraft.schemaVersion !== SURVEY_DRAFT_SCHEMA_VERSION) {
         return;
       }
 
       setDraft(loadedDraft);
       setRestoreDraftUpdatedAt(loadedDraft.updatedAt);
     });
-  }, [session, setRestoreDraftUpdatedAt, storage, survey]);
+  }, [draftStorage, session, setRestoreDraftUpdatedAt, survey]);
 
   if (!survey) {
     return null;
@@ -67,7 +65,7 @@ export function SurveyIntroPage() {
 
   const startFresh = async () => {
     if (survey && session) {
-      await storage.removeDraft(buildDraftKey({ surveyId: survey.id, participantUserId: session.userId }));
+      await draftStorage.removeDraft({ surveyId: survey.id, participantUserId: session.userId });
     }
 
     clearDraftValues();
@@ -82,7 +80,7 @@ export function SurveyIntroPage() {
       return;
     }
 
-    const section = survey.sections.find((item) => item.id === draft.currentSectionId) ?? firstSection;
+    const section = answerSections.find((item) => item.id === draft.currentSectionId) ?? firstSection;
     hydrateDraft({
       values: draft.values,
       locale: draft.locale,
@@ -166,10 +164,6 @@ function readSurveyIntroDescription(survey: PublicSurvey, locale: 'ko' | 'en', f
   }
 
   return '';
-}
-
-function isIntroSection(section: PublicSurveySection): boolean {
-  return section.sectionType === 'intro' || section.sectionKey === 'intro';
 }
 
 function renderTextWithLinks(text: string): ReactNode[] {

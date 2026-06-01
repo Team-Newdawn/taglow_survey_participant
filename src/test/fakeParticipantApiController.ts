@@ -9,6 +9,8 @@ import type {
   SignInCommand,
   SubmissionCommand,
   SubmissionResult,
+  SurveyDraft,
+  SurveyDraftIdentity,
   SurveyAccessResult,
   SurveyAsset,
 } from '../api/participant';
@@ -25,6 +27,7 @@ type FakeControllerOverrides = Partial<{
 }>;
 
 export function createFakeParticipantApiController(overrides: FakeControllerOverrides = {}): ParticipantApiController {
+  const drafts = new Map<string, SurveyDraft>();
   const session = Object.hasOwn(overrides, 'session') ? overrides.session ?? null : { userId: 'user-1', email: 'student@example.com' };
   const survey = overrides.survey ?? publishedSurveyFixture;
   const surveyError = overrides.surveyError;
@@ -87,5 +90,18 @@ export function createFakeParticipantApiController(overrides: FakeControllerOver
     async submitSurvey(_command: SubmissionCommand) {
       return submitResult;
     },
+    async loadSurveyDraft(identity: SurveyDraftIdentity) {
+      return drafts.get(createDraftKey(identity)) ?? null;
+    },
+    async saveSurveyDraft(draft: SurveyDraft) {
+      drafts.set(createDraftKey(draft), draft);
+    },
+    async removeSurveyDraft(identity: SurveyDraftIdentity) {
+      drafts.delete(createDraftKey(identity));
+    },
   };
+}
+
+function createDraftKey(identity: SurveyDraftIdentity): string {
+  return `${identity.surveyId}:${identity.participantUserId}`;
 }
