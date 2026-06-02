@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { useParticipantApiController, useParticipantSessionQuery } from '../../../api/participant';
-import newdawnDomunionLogoUrl from '../../../assets/logo_newdawn_domunion.svg';
+import newdawnDomunionLogoUrl from '../../../assets/logo_newdawn_domunion.png';
 import taglowLogoUrl from '../../../assets/taglow_logo.svg';
 import { Button } from '../../../components/Button';
 import { Message } from '../../../components/Message';
