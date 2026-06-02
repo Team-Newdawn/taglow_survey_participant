@@ -31,8 +31,11 @@ describe('SurveyIntroPage', () => {
 
     await waitFor(() => expect(screen.getByRole('heading', { name: '생활관 정기 설문조사' })).toBeInTheDocument());
 
-    const introCard = document.querySelector<HTMLElement>('.survey-intro-page__card');
+    const introDescription = screen.getByText(/관리자가 작성한 설문 안내입니다/);
+    const introCard = introDescription.closest('.survey-intro-page__card');
+    const languageHeading = screen.getByRole('heading', { name: '언어' });
     expect(introCard).toBeInTheDocument();
+    expect(languageHeading.compareDocumentPosition(introDescription) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(introCard).toHaveTextContent('관리자가 작성한 설문 안내입니다. 참여 전 확인해주세요.');
     expect(screen.queryByText('응답 전 확인해주세요.')).not.toBeInTheDocument();
     expect(screen.queryByText('약 7~10분 정도 소요될 수 있습니다.')).not.toBeInTheDocument();
