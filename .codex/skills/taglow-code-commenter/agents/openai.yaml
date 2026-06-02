@@ -1,0 +1,4 @@
+interface:
+  display_name: "Taglow Code Commenter"
+  short_description: "Add architecture-aware Taglow code comments"
+  default_prompt: "Use $taglow-code-commenter to add beginner-friendly, professional comments across the project source."

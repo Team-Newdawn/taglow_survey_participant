@@ -4,17 +4,19 @@ This directory contains participant survey pages.
 
 ## Expected Files
 
-- `SurveyEntryPage.tsx`
-- `SurveyEntryPage.css`
-- `SurveyIntroPage.tsx`
-- `SurveyIntroPage.css`
-- `SurveySectionPage.tsx`
-- `SurveySectionPage.css`
-- `SurveyReviewPage.tsx`
-- `SurveyReviewPage.css`
-- `SurveyCompletePage.tsx`
-- `SurveyCompletePage.css`
-- `components/`
+- `entry/SurveyEntryPage.tsx`
+- `entry/css/SurveyEntryPage.css`
+- `intro/SurveyIntroPage.tsx`
+- `intro/css/SurveyIntroPage.css`
+- `section/SurveySectionPage.tsx`
+- `section/css/SurveySectionPage.css`
+- `section/components/`
+- `section/navigation/`
+- `review/SurveyReviewPage.tsx`
+- `review/css/SurveyReviewPage.css`
+- `complete/SurveyCompletePage.tsx`
+- `complete/css/SurveyCompletePage.css`
+- `components/` for survey components shared by multiple page folders
 
 ## Responsibilities
 
@@ -27,9 +29,10 @@ This directory contains participant survey pages.
 
 ## CSS Ownership
 
-- Each survey page owns a matching page CSS file beside the page component.
+- Each survey page owns a matching `css/` directory under its page folder.
 - Page CSS should handle route shell layout, section/page spacing, and page-specific responsive composition.
-- Question and feature component styles belong in `components/<ComponentName>.css`, not in page CSS.
+- Section-only question component styles belong in `section/components/css/<ComponentName>.css`.
+- Shared survey component styles belong in `components/css/<ComponentName>.css`, not in page CSS.
 - Do not use a survey page CSS file to reach into another page or component's private class names.
 
 ## Rules

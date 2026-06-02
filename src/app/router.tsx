@@ -1,11 +1,11 @@
 import { Route, Routes } from 'react-router-dom';
 
 import { ParticipantLoginPage } from '../view/participant/auth/ParticipantLoginPage';
-import { SurveyCompletePage } from '../view/participant/survey/SurveyCompletePage';
-import { SurveyEntryPage } from '../view/participant/survey/SurveyEntryPage';
-import { SurveyIntroPage } from '../view/participant/survey/SurveyIntroPage';
-import { SurveyReviewPage } from '../view/participant/survey/SurveyReviewPage';
-import { SurveySectionPage } from '../view/participant/survey/SurveySectionPage';
+import { SurveyCompletePage } from '../view/participant/survey/complete/SurveyCompletePage';
+import { SurveyEntryPage } from '../view/participant/survey/entry/SurveyEntryPage';
+import { SurveyIntroPage } from '../view/participant/survey/intro/SurveyIntroPage';
+import { SurveyReviewPage } from '../view/participant/survey/review/SurveyReviewPage';
+import { SurveySectionPage } from '../view/participant/survey/section/SurveySectionPage';
 import { AccessDeniedPage } from '../view/participant/system/AccessDeniedPage';
 import { AlreadySubmittedPage } from '../view/participant/system/AlreadySubmittedPage';
 import { SurveyClosedPage } from '../view/participant/system/SurveyClosedPage';
