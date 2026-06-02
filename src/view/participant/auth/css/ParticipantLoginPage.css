@@ -16,19 +16,19 @@
   grid-area: top;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
+  justify-content: flex-end;
   width: 100%;
 }
 
 .participant-login-page__logo {
   display: block;
-  width: min(calc(var(--space-12) * 3.5), 44vw);
+  width: min(calc(var(--space-12) * 3.5), 34vw);
 }
 
 .participant-login-page__partner-logo {
   display: block;
-  width: min(calc(var(--space-12) * 5), 40vw);
+  width: min(calc(var(--space-12) * 5), 55vw);
+  justify-self: center;
 }
 
 .participant-login-page__body {
@@ -40,7 +40,7 @@
 
 .participant-login-page__body h1 {
   margin: 0;
-  font-size: var(--font-size-display);
+  font-size: 25px;
   line-height: var(--line-height-display);
 }
 
