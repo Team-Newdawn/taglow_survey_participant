@@ -15,6 +15,7 @@ import { useParticipantProgressStore } from '../../../../store/participantProgre
 import { buildSubmissionAnswers, extractRespondentProfile, findMissingRequiredQuestions } from '../../../../utils/answerNormalizer';
 import { readLocalizedText, resolveSurveyDefaultLocale } from '../../../../utils/i18nText';
 import { getOrCreateParticipantDeviceId, markSurveySubmittedOnDevice } from '../../../../utils/participantDevice';
+import { buildSubmissionRawPayloadMetadata } from '../../../../utils/submissionMetadata';
 import { getAnswerSections } from '../surveySections';
 import { getSurveyLocaleCopy } from '../surveyLocaleCopy';
 import './css/SurveyReviewPage.css';
@@ -71,7 +72,10 @@ export function SurveyReviewPage() {
         locale: displayLocale,
         profile: extractRespondentProfile(survey, values),
         answers: submissionAnswers,
-        rawPayload: values,
+        rawPayload: buildSubmissionRawPayloadMetadata({
+          answerCount: submissionAnswers.length,
+          imageTagCount,
+        }),
       });
       markSurveySubmittedOnDevice(publicSlug);
       await draftStorage.removeDraft({ surveyId: survey.id, participantUserId: session.userId });
