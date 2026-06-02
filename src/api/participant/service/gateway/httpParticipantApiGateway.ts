@@ -9,6 +9,8 @@ import type {
   RawPublicSurveyBundle,
   RawResponse,
   RawSession,
+  RawServiceFeedbackPayload,
+  RawServiceFeedbackResult,
   RawSubmitSurveyPayload,
   RawSubmitSurveyResult,
 } from './participantApiGateway';
@@ -75,6 +77,13 @@ export class HttpParticipantApiGateway implements ParticipantApiGateway {
 
   uploadQuestionImage(): Promise<RawParticipantQuestionImageUpload> {
     throw new ParticipantApiError('UPLOAD_FAILED', 'HTTP participant image upload gateway is not implemented yet.');
+  }
+
+  async createServiceFeedback(payload: RawServiceFeedbackPayload): Promise<RawServiceFeedbackResult> {
+    return this.request<RawServiceFeedbackResult>('/api/service-feedback', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   }
 
   private async request<T>(path: string, init?: RequestInit): Promise<T> {

@@ -10,6 +10,7 @@ export { useDuplicateSubmissionQuery } from './query/useDuplicateSubmissionQuery
 export { useParticipantQuestionImageUploadMutation } from './query/useParticipantQuestionImageUploadMutation';
 export { useParticipantSessionQuery } from './query/useParticipantSessionQuery';
 export { usePublicSurveyQuery } from './query/usePublicSurveyQuery';
+export { useServiceFeedbackMutation } from './query/useServiceFeedbackMutation';
 export { useSubmissionMutation } from './query/useSubmissionMutation';
 export { useSurveyAccessQuery } from './query/useSurveyAccessQuery';
 export { createParticipantApiRuntime } from './runtime/createParticipantApiRuntime';

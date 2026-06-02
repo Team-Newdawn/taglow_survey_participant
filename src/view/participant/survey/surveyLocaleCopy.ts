@@ -92,6 +92,13 @@ export type SurveyLocaleCopy = {
   completeDescription: string;
   completeThanksTitle: string;
   completeContactDescription: string;
+  serviceFeedbackTitle: string;
+  serviceFeedbackLabel: string;
+  serviceFeedbackPlaceholder: string;
+  serviceFeedbackSubmit: string;
+  serviceFeedbackSubmitting: string;
+  serviceFeedbackSuccess: string;
+  serviceFeedbackError: string;
   backToIntro: string;
 };
 
@@ -191,6 +198,13 @@ const koCopy: SurveyLocaleCopy = {
   completeDescription: '남겨주신 의견은 개선 우선순위와 보고 자료를 만드는 데 활용됩니다.',
   completeThanksTitle: '참여해주셔서 감사합니다.',
   completeContactDescription: '제출 내용 수정이 필요한 경우 담당자에게 문의해주세요.',
+  serviceFeedbackTitle: 'Taglow 설문 서비스를 개선하기 위한 아이디어를 제공해주세요. 필수 항목이 아니니, 자유롭게 작성해주세요.',
+  serviceFeedbackLabel: '개선 아이디어',
+  serviceFeedbackPlaceholder: '사용하면서 아쉬웠던 점이나 더 좋아질 수 있는 아이디어를 적어주세요.',
+  serviceFeedbackSubmit: '아이디어 보내기',
+  serviceFeedbackSubmitting: '보내는 중',
+  serviceFeedbackSuccess: '아이디어가 전달되었습니다.',
+  serviceFeedbackError: '아이디어를 보내지 못했습니다. 잠시 후 다시 시도해주세요.',
   backToIntro: '설문 첫 화면으로',
 };
 
@@ -286,5 +300,12 @@ const enCopy: SurveyLocaleCopy = {
   completeDescription: 'Your feedback will be used to prioritize improvements and prepare reports.',
   completeThanksTitle: 'Thank you for participating.',
   completeContactDescription: 'Contact the survey manager if you need to edit your submitted response.',
+  serviceFeedbackTitle: 'Share an idea to improve the Taglow survey service.',
+  serviceFeedbackLabel: 'Improvement idea',
+  serviceFeedbackPlaceholder: 'Tell us what felt inconvenient or what could make the service better.',
+  serviceFeedbackSubmit: 'Send idea',
+  serviceFeedbackSubmitting: 'Sending',
+  serviceFeedbackSuccess: 'Your idea has been sent.',
+  serviceFeedbackError: 'Could not send your idea. Please try again shortly.',
   backToIntro: 'Back to survey start',
 };

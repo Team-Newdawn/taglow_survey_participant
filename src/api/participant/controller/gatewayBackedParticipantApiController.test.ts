@@ -74,6 +74,47 @@ describe('GatewayBackedParticipantApiController submission', () => {
     expect(createResponse).toHaveBeenCalledWith(expect.objectContaining({ survey_id: 'survey-1' }));
     expect(createAnswers).toHaveBeenCalledWith([expect.objectContaining({ response_id: 'response-fallback' })]);
   });
+
+  it('stores service feedback separately from survey submission answers', async () => {
+    const createServiceFeedback = vi.fn(async () => ({ submittedAt: '2026-06-02T00:00:00.000Z' }));
+    const controller = new GatewayBackedParticipantApiController(
+      createGateway({ createServiceFeedback }),
+      new ParticipantPayloadMapper(),
+    );
+
+    await expect(
+      controller.submitServiceFeedback({
+        publicSlug: 'fixture-survey',
+        locale: 'ko',
+        feedbackText: '  완료 화면이 편했으면 좋겠습니다.  ',
+      }),
+    ).resolves.toEqual({ submittedAt: '2026-06-02T00:00:00.000Z' });
+
+    expect(createServiceFeedback).toHaveBeenCalledWith({
+      public_slug: 'fixture-survey',
+      locale: 'ko',
+      feedback_text: '완료 화면이 편했으면 좋겠습니다.',
+      source: 'complete_page',
+    });
+  });
+
+  it('rejects empty service feedback before calling the gateway', async () => {
+    const createServiceFeedback = vi.fn();
+    const controller = new GatewayBackedParticipantApiController(
+      createGateway({ createServiceFeedback }),
+      new ParticipantPayloadMapper(),
+    );
+
+    await expect(
+      controller.submitServiceFeedback({
+        publicSlug: 'fixture-survey',
+        locale: 'ko',
+        feedbackText: '   ',
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+
+    expect(createServiceFeedback).not.toHaveBeenCalled();
+  });
 });
 
 describe('GatewayBackedParticipantApiController access', () => {
@@ -300,6 +341,9 @@ function createGateway(overrides: Partial<ParticipantApiGateway>): ParticipantAp
         storage_path: 'participant-uploads/upload-1.png',
         metadata: {},
       };
+    },
+    async createServiceFeedback() {
+      return {};
     },
     ...overrides,
   };
