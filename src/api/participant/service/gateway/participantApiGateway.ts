@@ -131,6 +131,17 @@ export type RawParticipantQuestionImageUpload = Readonly<{
   metadata: RawJson;
 }>;
 
+export type RawServiceFeedbackPayload = Readonly<{
+  public_slug: string;
+  locale: 'ko' | 'en';
+  feedback_text: string;
+  source: 'complete_page';
+}>;
+
+export type RawServiceFeedbackResult = Readonly<{
+  submittedAt?: string;
+}>;
+
 export interface ParticipantApiGateway {
   getSession(): Promise<RawSession | null>;
   signInWithGoogle(redirectTo: string): Promise<void>;
@@ -161,4 +172,5 @@ export interface ParticipantApiGateway {
     questionId: string;
     file: File;
   }): Promise<RawParticipantQuestionImageUpload>;
+  createServiceFeedback(payload: RawServiceFeedbackPayload): Promise<RawServiceFeedbackResult>;
 }

@@ -6,6 +6,8 @@ import type {
   ParticipantQuestionImageUploadCommand,
   ParticipantSession,
   PublicSurvey,
+  ServiceFeedbackCommand,
+  ServiceFeedbackResult,
   SignInCommand,
   SubmissionCommand,
   SubmissionResult,
@@ -22,6 +24,8 @@ type FakeControllerOverrides = Partial<{
   surveyError: Error;
   duplicate: DuplicateSubmissionResult;
   submitResult: SubmissionResult;
+  serviceFeedbackResult: ServiceFeedbackResult;
+  submitServiceFeedback: ParticipantApiController['submitServiceFeedback'];
   uploadResult: ParticipantQuestionImageUpload;
   uploadQuestionImage: ParticipantApiController['uploadQuestionImage'];
 }>;
@@ -33,6 +37,12 @@ export function createFakeParticipantApiController(overrides: FakeControllerOver
   const surveyError = overrides.surveyError;
   const duplicate = overrides.duplicate ?? { alreadySubmitted: false };
   const submitResult = overrides.submitResult ?? { responseId: 'response-1', submittedAt: '2026-05-28T00:00:00.000Z' };
+  const serviceFeedbackResult = overrides.serviceFeedbackResult ?? { submittedAt: '2026-05-28T00:00:00.000Z' };
+  const submitServiceFeedback =
+    overrides.submitServiceFeedback ??
+    (async (_command: ServiceFeedbackCommand) => {
+      return serviceFeedbackResult;
+    });
   const uploadResult = overrides.uploadResult ?? {
     storageBucket: 'survey-assets',
     storagePath: 'participant-uploads/upload-1.png',
@@ -90,6 +100,7 @@ export function createFakeParticipantApiController(overrides: FakeControllerOver
     async submitSurvey(_command: SubmissionCommand) {
       return submitResult;
     },
+    submitServiceFeedback,
     async loadSurveyDraft(identity: SurveyDraftIdentity) {
       return drafts.get(createDraftKey(identity)) ?? null;
     },
