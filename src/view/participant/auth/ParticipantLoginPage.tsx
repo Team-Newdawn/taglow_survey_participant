@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 
 import { useParticipantApiController, useParticipantSessionQuery } from '../../../api/participant';
 import newdawnDomunionLogoUrl from '../../../assets/logo_newdawn_domunion.png';
-import taglowLogoUrl from '../../../assets/taglow_logo.svg';
+import taglowLogoUrl from '../../../assets/taglow_logo.png';
 import { Button } from '../../../components/Button';
 import { Message } from '../../../components/Message';
 import './css/ParticipantLoginPage.css';
@@ -36,7 +36,6 @@ export function ParticipantLoginPage() {
     <main className="participant-login-page">
       <header className="participant-login-page__top">
         <img src={taglowLogoUrl} alt="Taglow" className="participant-login-page__logo" />
-        <img src={newdawnDomunionLogoUrl} alt="Newdawn Domunion" className="participant-login-page__partner-logo" />
       </header>
 
       <section
@@ -59,6 +58,7 @@ export function ParticipantLoginPage() {
           </Message>
         ) : null}
 
+        <img src={newdawnDomunionLogoUrl} alt="Newdawn Domunion" className="participant-login-page__partner-logo" />
         <Button fullWidth disabled={isSigningIn || sessionQuery.isPending} onClick={signIn}>
           {isSigningIn ? '로그인 이동 중' : 'Google로 계속하기'}
         </Button>
