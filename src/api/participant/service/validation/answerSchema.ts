@@ -20,7 +20,7 @@ export const experienceAnswerSchema = z.object({
 
 export const scaleAnswerSchema = z.object({
   answerType: z.literal('scale'),
-  scoreValue: z.number().int().min(1).max(5),
+  scoreValue: z.number().int().min(1),
 });
 
 export const singleChoiceAnswerSchema = z.object({

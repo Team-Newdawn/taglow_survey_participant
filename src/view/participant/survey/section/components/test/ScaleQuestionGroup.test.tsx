@@ -133,6 +133,80 @@ describe('ScaleQuestionGroup', () => {
     expect(screen.getByRole('button', { name: '5 매우 그럼' })).toBeInTheDocument();
   });
 
+  it('renders every configured scale label inside an expanded group item', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const labelsKo = ['참여경험없음', '매우 불만족', '불만족', '보통', '만족', '매우 만족', '들어본 적 없음'];
+
+    render(
+      <ScaleQuestionGroup
+        groupTitle="소등제도 만족도"
+        questions={[
+          {
+            ...buildGroupQuestion('scale-1', 0, '소등시간'),
+            config: {
+              displayGroup: '소등제도 만족도',
+              labelsKo,
+            },
+          },
+        ]}
+        locale="ko"
+        fallbackLocale="ko"
+        values={{}}
+        missingQuestionIds={[]}
+        onChange={onChange}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /소등시간/ }));
+
+    for (const [index, label] of labelsKo.entries()) {
+      expect(screen.getByRole('button', { name: `${index + 1} ${label}` })).toBeInTheDocument();
+    }
+
+    await user.click(screen.getByRole('button', { name: '7 들어본 적 없음' }));
+
+    expect(onChange).toHaveBeenCalledWith('scale-1', { scoreValue: 7 });
+  });
+
+  it('opens the next row from the midpoint of a configured scale', async () => {
+    const user = userEvent.setup();
+    const labelsKo = ['참여경험없음', '매우 불만족', '불만족', '보통', '만족', '매우 만족', '들어본 적 없음'];
+
+    render(
+      <ScaleQuestionGroup
+        groupTitle="소등제도 만족도"
+        questions={[
+          {
+            ...buildGroupQuestion('scale-1', 0, '소등시간'),
+            config: {
+              displayGroup: '소등제도 만족도',
+              labelsKo,
+            },
+          },
+          {
+            ...buildGroupQuestion('scale-2', 1, '소등 여부'),
+            config: {
+              displayGroup: '소등제도 만족도',
+              labelsKo,
+            },
+          },
+        ]}
+        locale="ko"
+        fallbackLocale="ko"
+        values={{}}
+        missingQuestionIds={[]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /소등시간/ }));
+    await user.click(screen.getByRole('button', { name: '4 보통' }));
+
+    expect(screen.getByRole('button', { name: /소등시간/ })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: /소등 여부/ })).toHaveAttribute('aria-expanded', 'true');
+  });
+
   it('extracts item labels from bracket text without a source number', () => {
     render(
       <ScaleQuestionGroup
