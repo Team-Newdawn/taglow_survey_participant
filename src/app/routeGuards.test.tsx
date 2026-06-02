@@ -1,5 +1,5 @@
 import { screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createFakeParticipantApiController } from '../test/fakeParticipantApiController';
 import { publishedSurveyFixture } from '../test/fixtures/publicSurveyFixture';
@@ -39,22 +39,30 @@ describe('participant route guards', () => {
   });
 
   it('routes the public survey entry to login even when a session exists', async () => {
+    const controller = createFakeParticipantApiController({ session: { userId: 'user-1', email: 'student@example.com' } });
+    const getPublicSurvey = vi.spyOn(controller, 'getPublicSurvey');
+
     renderWithProviders(<AppRoutes />, {
       route: '/survey/fixture-survey',
-      controller: createFakeParticipantApiController({ session: { userId: 'user-1', email: 'student@example.com' } }),
+      controller,
     });
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Google로 계속하기' })).toBeInTheDocument());
     expect(screen.queryByText('설문 안내')).not.toBeInTheDocument();
+    expect(getPublicSurvey).not.toHaveBeenCalled();
   });
 
   it('allows any Google account with a Supabase session to continue', async () => {
+    const controller = createFakeParticipantApiController({ session: { userId: 'user-1', email: 'student@example.com' } });
+    const getPublicSurvey = vi.spyOn(controller, 'getPublicSurvey');
+
     renderWithProviders(<AppRoutes />, {
       route: '/survey/fixture-survey/intro',
-      controller: createFakeParticipantApiController({ session: { userId: 'user-1', email: 'student@example.com' } }),
+      controller,
     });
 
     await waitFor(() => expect(screen.getByText('설문 안내')).toBeInTheDocument());
+    expect(getPublicSurvey).not.toHaveBeenCalled();
   });
 
   it('renders a generic access denied page when the route is opened directly', async () => {

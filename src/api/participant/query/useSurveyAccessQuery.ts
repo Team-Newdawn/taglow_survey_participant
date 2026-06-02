@@ -27,7 +27,12 @@ export function useSurveyAccessQuery(publicSlug: string | undefined) {
         return { status: 'already_submitted' as const };
       }
 
-      return controller.checkAccess({ publicSlug: publicSlug ?? '', participantDeviceId });
+      const access = await controller.checkAccess({ publicSlug: publicSlug ?? '', participantDeviceId });
+      if (publicSlug && session && access.survey) {
+        queryClient.setQueryData(participantQueryKeys.publicSurvey(publicSlug, session.userId), access.survey);
+      }
+
+      return access;
     },
     enabled: Boolean(publicSlug) && !sessionQuery.isPending,
     staleTime: SURVEY_ACCESS_STALE_TIME_MS,
