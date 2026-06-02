@@ -41,6 +41,7 @@ export function SurveyIntroPage() {
   const answerSections = getAnswerSections(survey);
   const firstSection = answerSections[0];
   const copy = getSurveyLocaleCopy(displayLocale);
+  const canOpenSectionShortcuts = import.meta.env.DEV;
 
   useEffect(() => {
     if (!survey || !session) {
@@ -128,12 +129,29 @@ export function SurveyIntroPage() {
 
       <section className="survey-intro-page__sections">
         <h2>{copy.sectionsToComplete}</h2>
-        {answerSections.map((section, index) => (
-          <Link key={section.id} to={`/survey/${publicSlug}/sections/${section.sectionKey}`}>
-            <span>{index + 1}</span>
-            {readLocalizedText(section.title, displayLocale, defaultLocale)}
-          </Link>
-        ))}
+        {answerSections.map((section, index) => {
+          const sectionTitle = readLocalizedText(section.title, displayLocale, defaultLocale);
+          const sectionContent = (
+            <>
+              <span className="survey-intro-page__section-index">{index + 1}</span>
+              {sectionTitle}
+            </>
+          );
+
+          return canOpenSectionShortcuts ? (
+            <Link
+              key={section.id}
+              className="survey-intro-page__section-item"
+              to={`/survey/${publicSlug}/sections/${section.sectionKey}`}
+            >
+              {sectionContent}
+            </Link>
+          ) : (
+            <div key={section.id} className="survey-intro-page__section-item" aria-disabled="true">
+              {sectionContent}
+            </div>
+          );
+        })}
       </section>
 
       <div className="survey-intro-page__bottom">

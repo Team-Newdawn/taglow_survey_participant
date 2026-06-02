@@ -60,7 +60,7 @@
   line-height: var(--line-height-heading);
 }
 
-.survey-intro-page__sections a {
+.survey-intro-page__section-item {
   display: flex;
   min-height: 52px;
   align-items: center;
@@ -72,7 +72,7 @@
   text-decoration: none;
 }
 
-.survey-intro-page__sections span {
+.survey-intro-page__section-index {
   display: inline-flex;
   width: 28px;
   height: 28px;

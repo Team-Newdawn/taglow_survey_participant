@@ -13,12 +13,16 @@ describe('ParticipantLoginPage', () => {
     });
 
     const logo = await screen.findByRole('img', { name: 'Taglow' });
+    const partnerLogo = screen.getByRole('img', { name: 'Newdawn Domunion' });
     const title = screen.getByRole('heading', { name: '목소리를 더 선명하게 모읍니다.' });
     const signInButton = screen.getByRole('button', { name: 'Google로 계속하기' });
 
     expect(document.querySelector('.participant-login-page__top')).toContainElement(logo);
+    expect(document.querySelector('.participant-login-page__top')).not.toContainElement(partnerLogo);
     expect(document.querySelector('.participant-login-page__body')).toContainElement(title);
+    expect(document.querySelector('.participant-login-page__bottom')).toContainElement(partnerLogo);
     expect(document.querySelector('.participant-login-page__bottom')).toContainElement(signInButton);
+    expect(partnerLogo.compareDocumentPosition(signInButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText('Taglow는 현장의 의견을 기록하고 필요한 변화를 찾도록 돕는 피드백 플랫폼입니다.')).toBeInTheDocument();
     expect(screen.queryByText('생활관 정기 설문조사')).not.toBeInTheDocument();
     expect(screen.queryByText(/설문에 참여/)).not.toBeInTheDocument();

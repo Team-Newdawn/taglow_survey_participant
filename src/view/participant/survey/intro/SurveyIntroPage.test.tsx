@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppRoutes } from '../../../../app/router';
 import { useParticipantDraftStore } from '../../../../store/participantDraftStore';
@@ -12,10 +12,15 @@ import { renderWithProviders } from '../../../../test/renderWithProviders';
 
 describe('SurveyIntroPage', () => {
   beforeEach(() => {
+    vi.stubEnv('DEV', true);
     window.localStorage.clear();
     useParticipantDraftStore.getState().clearDraftValues();
     useParticipantLocaleStore.getState().setLocale('ko');
     useParticipantProgressStore.getState().resetProgress();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it('renders the admin-configured survey description inside the intro card', async () => {
@@ -125,5 +130,40 @@ describe('SurveyIntroPage', () => {
 
     expect(screen.getByText('This is the English survey description.')).toBeInTheDocument();
     expect(screen.queryByText('한국어 설문 설명입니다.')).not.toBeInTheDocument();
+  });
+
+  it('keeps section shortcuts clickable in development mode', async () => {
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/intro',
+      controller: createFakeParticipantApiController(),
+    });
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: '생활관 정기 설문조사' })).toBeInTheDocument());
+
+    expect(screen.getByRole('link', { name: /기본 정보/ })).toHaveAttribute(
+      'href',
+      '/survey/fixture-survey/sections/profile',
+    );
+    expect(screen.getByRole('link', { name: /생활관 시설/ })).toHaveAttribute(
+      'href',
+      '/survey/fixture-survey/sections/facility',
+    );
+  });
+
+  it('renders section shortcuts as non-clickable items outside development mode', async () => {
+    vi.stubEnv('DEV', false);
+
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/intro',
+      controller: createFakeParticipantApiController(),
+    });
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: '생활관 정기 설문조사' })).toBeInTheDocument());
+
+    const sectionItems = document.querySelectorAll('.survey-intro-page__section-item');
+    expect(sectionItems[0]).toHaveTextContent('기본 정보');
+    expect(sectionItems[1]).toHaveTextContent('생활관 시설');
+    expect(screen.queryByRole('link', { name: /기본 정보/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /생활관 시설/ })).not.toBeInTheDocument();
   });
 });
