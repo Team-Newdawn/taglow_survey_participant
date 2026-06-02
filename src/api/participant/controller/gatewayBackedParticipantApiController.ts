@@ -5,6 +5,8 @@ import type {
   DuplicateSubmissionResult,
   ParticipantQuestionImageUpload,
   ParticipantQuestionImageUploadCommand,
+  ServiceFeedbackCommand,
+  ServiceFeedbackResult,
   SignInCommand,
 } from '../model/commands';
 import type { PublicSurvey } from '../model/publicSurvey';
@@ -204,6 +206,30 @@ export class GatewayBackedParticipantApiController implements ParticipantApiCont
         throw apiError;
       }
 
+      throw new ParticipantApiError(apiError.code, apiError.message, error);
+    }
+  }
+
+  async submitServiceFeedback(command: ServiceFeedbackCommand): Promise<ServiceFeedbackResult> {
+    const feedbackText = command.feedbackText.trim();
+
+    if (!feedbackText) {
+      throw new ParticipantApiError('VALIDATION_FAILED', 'Service feedback must not be empty.');
+    }
+
+    if (feedbackText.length > 2000) {
+      throw new ParticipantApiError('VALIDATION_FAILED', 'Service feedback must be 2000 characters or fewer.');
+    }
+
+    try {
+      return await this.gateway.createServiceFeedback({
+        public_slug: command.publicSlug,
+        locale: command.locale,
+        feedback_text: feedbackText,
+        source: 'complete_page',
+      });
+    } catch (error) {
+      const apiError = toParticipantApiError(error, 'SUBMISSION_FAILED');
       throw new ParticipantApiError(apiError.code, apiError.message, error);
     }
   }

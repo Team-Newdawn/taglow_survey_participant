@@ -37,3 +37,13 @@ export type ParticipantQuestionImageUpload = Readonly<{
   signedUrl?: string;
   metadata: Record<string, unknown>;
 }>;
+
+export type ServiceFeedbackCommand = Readonly<{
+  publicSlug: string;
+  locale: 'ko' | 'en';
+  feedbackText: string;
+}>;
+
+export type ServiceFeedbackResult = Readonly<{
+  submittedAt?: string;
+}>;

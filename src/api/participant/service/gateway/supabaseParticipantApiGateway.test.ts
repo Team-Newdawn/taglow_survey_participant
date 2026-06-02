@@ -100,6 +100,33 @@ describe('SupabaseParticipantApiGateway submission', () => {
     expect(insert).toHaveBeenCalledWith([{ survey_id: 'survey-1', answer_type: 'scale' }]);
     expect(select).not.toHaveBeenCalled();
   });
+
+  it('inserts service feedback without returning rows for analytics paths', async () => {
+    const select = vi.fn();
+    const insert = vi.fn(async () => ({ error: null, select }));
+    const from = vi.fn(() => ({ insert }));
+    const gateway = new SupabaseParticipantApiGateway({ from } as unknown as SupabaseClient);
+
+    await expect(
+      gateway.createServiceFeedback({
+        public_slug: 'fixture-survey',
+        locale: 'ko',
+        feedback_text: '좋은 아이디어가 있습니다.',
+        source: 'complete_page',
+      }),
+    ).resolves.toEqual({});
+
+    expect(from).toHaveBeenCalledWith('participant_service_feedback');
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        public_slug: 'fixture-survey',
+        locale: 'ko',
+        feedback_text: '좋은 아이디어가 있습니다.',
+        source: 'complete_page',
+      }),
+    );
+    expect(select).not.toHaveBeenCalled();
+  });
 });
 
 describe('SupabaseParticipantApiGateway access', () => {

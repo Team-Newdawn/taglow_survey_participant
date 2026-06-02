@@ -15,6 +15,8 @@ import type {
   RawResponse,
   RawSectionRow,
   RawSession,
+  RawServiceFeedbackPayload,
+  RawServiceFeedbackResult,
   RawSurveyRow,
 } from './participantApiGateway';
 
@@ -335,6 +337,21 @@ export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
       signed_url: signedUrlData.signedUrl,
       metadata: answerMetadata,
     };
+  }
+
+  async createServiceFeedback(payload: RawServiceFeedbackPayload): Promise<RawServiceFeedbackResult> {
+    const { error } = await this.supabase.from('participant_service_feedback').insert({
+      public_slug: payload.public_slug,
+      locale: payload.locale,
+      feedback_text: payload.feedback_text,
+      source: payload.source,
+    });
+
+    if (error) {
+      throw toParticipantApiError(error, 'SUBMISSION_FAILED');
+    }
+
+    return {};
   }
 }
 

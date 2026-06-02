@@ -5,6 +5,8 @@ import type {
   DuplicateSubmissionResult,
   ParticipantQuestionImageUpload,
   ParticipantQuestionImageUploadCommand,
+  ServiceFeedbackCommand,
+  ServiceFeedbackResult,
   SignInCommand,
   SurveyAccessCommand,
 } from '../model/commands';
@@ -31,6 +33,7 @@ export interface ParticipantApiController {
   uploadQuestionImage(command: ParticipantQuestionImageUploadCommand): Promise<ParticipantQuestionImageUpload>;
 
   submitSurvey(command: SubmissionCommand): Promise<SubmissionResult>;
+  submitServiceFeedback(command: ServiceFeedbackCommand): Promise<ServiceFeedbackResult>;
 
   loadSurveyDraft(identity: SurveyDraftIdentity): Promise<SurveyDraft | null>;
   saveSurveyDraft(draft: SurveyDraft): Promise<void>;
