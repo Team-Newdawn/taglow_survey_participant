@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 import type { Locale, PublicQuestion } from '../../../../../api/participant';
 import { getSurveyLocaleCopy } from '../../surveyLocaleCopy';
 import { QuestionShell } from './QuestionShell';
@@ -22,8 +24,8 @@ type ScaleQuestionBodyProps = {
 
 export function ScaleQuestion(props: QuestionComponentProps<unknown>) {
   const value = readScaleValue(props.value);
-  const threshold = readLowScoreThreshold(props.question);
   const labels = readScaleLabels(props.question, props.locale, props.fallbackLocale);
+  const threshold = readLowScoreThreshold(props.question, labels);
 
   return (
     <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
@@ -34,6 +36,7 @@ export function ScaleQuestion(props: QuestionComponentProps<unknown>) {
 
 export function ScaleQuestionBody({ value, threshold, locale, labels, onChange, onScoreSelect }: ScaleQuestionBodyProps) {
   const copy = getSurveyLocaleCopy(locale);
+  const scores = createScaleScores(labels);
   const hasConfiguredLabels = Boolean(labels);
   const selectScore = (score: number) => {
     const nextValue = createScaleValueForScore(value, score, threshold);
@@ -45,10 +48,17 @@ export function ScaleQuestionBody({ value, threshold, locale, labels, onChange, 
     <div className="scale-question">
       <div className="scale-question__labels">
         <span>{labels?.[0] ? `1 ${labels[0]}` : copy.scaleLowLabel}</span>
-        <span>{labels?.[4] ? `5 ${labels[4]}` : copy.scaleHighLabel}</span>
+        <span>
+          {labels?.[labels.length - 1]
+            ? `${labels.length} ${labels[labels.length - 1]}`
+            : copy.scaleHighLabel}
+        </span>
       </div>
-      <div className={`scale-question__buttons${hasConfiguredLabels ? ' has-configured-labels' : ''}`}>
-        {[1, 2, 3, 4, 5].map((score) => (
+      <div
+        className={`scale-question__buttons${hasConfiguredLabels ? ' has-configured-labels' : ''}`}
+        style={{ '--scale-option-count': scores.length } as CSSProperties}
+      >
+        {scores.map((score) => (
           <button
             key={score}
             type="button"
@@ -77,7 +87,11 @@ export function createScaleValueForScore(value: ScaleValue, score: number, thres
   return score <= threshold ? { ...value, scoreValue: score } : { scoreValue: score };
 }
 
-export function readLowScoreThreshold(question: QuestionComponentProps['question']): number {
+export function readLowScoreThreshold(question: QuestionComponentProps['question'], labels?: string[]): number {
+  if (labels) {
+    return Math.floor(labels.length / 2);
+  }
+
   return typeof question.config.lowScoreThreshold === 'number' ? question.config.lowScoreThreshold : 2;
 }
 
@@ -89,15 +103,20 @@ export function readScaleLabels(question: PublicQuestion, locale: Locale, fallba
   return localeLabels ?? fallbackLabels ?? koreanLabels;
 }
 
+function createScaleScores(labels: string[] | undefined): number[] {
+  const optionCount = labels?.length ?? 5;
+  return Array.from({ length: optionCount }, (_, index) => index + 1);
+}
+
 export function readScaleValue(value: unknown): ScaleValue {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as ScaleValue) : {};
 }
 
 function readConfigLabelArray(value: unknown): string[] | undefined {
   if (Array.isArray(value)) {
-    const labels = value.map((label) => (typeof label === 'string' ? label.trim() : '')).slice(0, 5);
+    const labels = value.map((label) => (typeof label === 'string' ? label.trim() : ''));
 
-    return labels.length === 5 && labels.some(Boolean) ? labels : undefined;
+    return labels.length >= 2 && labels.some(Boolean) ? labels : undefined;
   }
 
   if (typeof value !== 'object' || value === null) {
@@ -105,10 +124,25 @@ function readConfigLabelArray(value: unknown): string[] | undefined {
   }
 
   const record = value as Record<string, unknown>;
-  const labels = [1, 2, 3, 4, 5].map((score) => {
-    const label = record[String(score)] ?? record[`score${score}`];
+  const scoreKeys = Object.keys(record)
+    .flatMap((key) => {
+      const directScore = Number(key);
+      if (Number.isInteger(directScore) && directScore >= 1) {
+        return [directScore];
+      }
+
+      const scoreMatch = key.match(/^score(\d+)$/i);
+      const score = scoreMatch ? Number(scoreMatch[1]) : NaN;
+      return Number.isInteger(score) && score >= 1 ? [score] : [];
+    })
+    .sort((left, right) => left - right);
+  const uniqueScoreKeys = Array.from(new Set(scoreKeys));
+  const maxScore = uniqueScoreKeys.at(-1) ?? 0;
+  const labels = Array.from({ length: maxScore }, (_, index) => {
+    const score = index + 1;
+    const label = record[String(score)] ?? record[`score${score}`] ?? record[`Score${score}`];
     return typeof label === 'string' ? label.trim() : '';
   });
 
-  return labels.some(Boolean) ? labels : undefined;
+  return labels.length >= 2 && labels.some(Boolean) ? labels : undefined;
 }
