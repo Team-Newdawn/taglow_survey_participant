@@ -108,12 +108,6 @@ export function SurveyIntroPage() {
         />
       ) : null}
 
-      {surveyDescription ? (
-        <section className="survey-intro-page__card">
-          <p className="survey-intro-page__description">{renderTextWithLinks(surveyDescription)}</p>
-        </section>
-      ) : null}
-
       <section className="survey-intro-page__card">
         <h2>{copy.language}</h2>
         <div className="survey-intro-page__locale">
@@ -125,6 +119,12 @@ export function SurveyIntroPage() {
           </button>
         </div>
       </section>
+
+      {surveyDescription ? (
+        <section className="survey-intro-page__card">
+          <p className="survey-intro-page__description">{renderTextWithLinks(surveyDescription)}</p>
+        </section>
+      ) : null}
 
       <section className="survey-intro-page__sections">
         <h2>{copy.sectionsToComplete}</h2>
