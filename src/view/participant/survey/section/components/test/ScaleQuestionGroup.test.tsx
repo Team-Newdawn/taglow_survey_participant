@@ -104,6 +104,35 @@ describe('ScaleQuestionGroup', () => {
     expect(screen.getByText('5 Very high')).toBeInTheDocument();
   });
 
+  it('renders configured Korean scale labels inside an expanded group item', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ScaleQuestionGroup
+        groupTitle="소등제도 만족도"
+        questions={[
+          {
+            ...buildGroupQuestion('scale-1', 0, '소등시간'),
+            config: {
+              displayGroup: '소등제도 만족도',
+              labelsKo: ['전혀 아님', '아님', '보통', '그럼', '매우 그럼'],
+            },
+          },
+        ]}
+        locale="ko"
+        fallbackLocale="ko"
+        values={{}}
+        missingQuestionIds={[]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /소등시간/ }));
+
+    expect(screen.getByRole('button', { name: '1 전혀 아님' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '5 매우 그럼' })).toBeInTheDocument();
+  });
+
   it('extracts item labels from bracket text without a source number', () => {
     render(
       <ScaleQuestionGroup

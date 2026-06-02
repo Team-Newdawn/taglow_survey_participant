@@ -3,7 +3,7 @@ import { useEffect, useId, useState } from 'react';
 import type { Locale, PublicQuestion } from '../../../../../api/participant';
 import { readLocalizedText } from '../../../../../utils/i18nText';
 import { getSurveyLocaleCopy } from '../../surveyLocaleCopy';
-import { readLowScoreThreshold, readScaleValue, ScaleQuestionBody } from './ScaleQuestion';
+import { readLowScoreThreshold, readScaleLabels, readScaleValue, ScaleQuestionBody } from './ScaleQuestion';
 import './css/ScaleQuestionGroup.css';
 
 type ScaleQuestionGroupProps = {
@@ -61,6 +61,7 @@ export function ScaleQuestionGroup(props: ScaleQuestionGroupProps) {
           const error = props.missingQuestionIds.includes(question.id) ? copy.requiredQuestion : undefined;
           const panelId = `${question.id}-scale-panel`;
           const lowScoreThreshold = readLowScoreThreshold(question);
+          const labels = readScaleLabels(question, props.locale, props.fallbackLocale);
 
           return (
             <div key={question.id} className={`scale-question-group__item${error ? ' has-error' : ''}`}>
@@ -90,6 +91,7 @@ export function ScaleQuestionGroup(props: ScaleQuestionGroupProps) {
                     value={value}
                     threshold={lowScoreThreshold}
                     locale={props.locale}
+                    labels={labels}
                     onChange={(nextValue) => props.onChange(question.id, nextValue)}
                     onScoreSelect={(score) => {
                       if (score > lowScoreThreshold) {

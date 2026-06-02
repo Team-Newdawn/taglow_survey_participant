@@ -1,4 +1,4 @@
-import type { Locale } from '../../../../../api/participant';
+import type { Locale, PublicQuestion } from '../../../../../api/participant';
 import { getSurveyLocaleCopy } from '../../surveyLocaleCopy';
 import { QuestionShell } from './QuestionShell';
 import type { QuestionComponentProps } from './questionComponentTypes';
@@ -15,6 +15,7 @@ type ScaleQuestionBodyProps = {
   value: ScaleValue;
   threshold: number;
   locale: Locale;
+  labels?: string[];
   onChange: (value: ScaleValue) => void;
   onScoreSelect?: (score: number, value: ScaleValue) => void;
 };
@@ -22,16 +23,18 @@ type ScaleQuestionBodyProps = {
 export function ScaleQuestion(props: QuestionComponentProps<unknown>) {
   const value = readScaleValue(props.value);
   const threshold = readLowScoreThreshold(props.question);
+  const labels = readScaleLabels(props.question, props.locale, props.fallbackLocale);
 
   return (
     <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
-      <ScaleQuestionBody value={value} threshold={threshold} locale={props.locale} onChange={props.onChange} />
+      <ScaleQuestionBody value={value} threshold={threshold} locale={props.locale} labels={labels} onChange={props.onChange} />
     </QuestionShell>
   );
 }
 
-export function ScaleQuestionBody({ value, threshold, locale, onChange, onScoreSelect }: ScaleQuestionBodyProps) {
+export function ScaleQuestionBody({ value, threshold, locale, labels, onChange, onScoreSelect }: ScaleQuestionBodyProps) {
   const copy = getSurveyLocaleCopy(locale);
+  const hasConfiguredLabels = Boolean(labels);
   const selectScore = (score: number) => {
     const nextValue = createScaleValueForScore(value, score, threshold);
     onChange(nextValue);
@@ -41,18 +44,20 @@ export function ScaleQuestionBody({ value, threshold, locale, onChange, onScoreS
   return (
     <div className="scale-question">
       <div className="scale-question__labels">
-        <span>{copy.scaleLowLabel}</span>
-        <span>{copy.scaleHighLabel}</span>
+        <span>{labels?.[0] ? `1 ${labels[0]}` : copy.scaleLowLabel}</span>
+        <span>{labels?.[4] ? `5 ${labels[4]}` : copy.scaleHighLabel}</span>
       </div>
-      <div className="scale-question__buttons">
+      <div className={`scale-question__buttons${hasConfiguredLabels ? ' has-configured-labels' : ''}`}>
         {[1, 2, 3, 4, 5].map((score) => (
           <button
             key={score}
             type="button"
             className={value.scoreValue === score ? 'is-selected' : ''}
+            aria-label={labels?.[score - 1] ? `${score} ${labels[score - 1]}` : String(score)}
             onClick={() => selectScore(score)}
           >
-            {score}
+            <span className="scale-question__score">{score}</span>
+            {labels?.[score - 1] ? <span className="scale-question__score-label">{labels[score - 1]}</span> : null}
           </button>
         ))}
       </div>
@@ -76,6 +81,34 @@ export function readLowScoreThreshold(question: QuestionComponentProps['question
   return typeof question.config.lowScoreThreshold === 'number' ? question.config.lowScoreThreshold : 2;
 }
 
+export function readScaleLabels(question: PublicQuestion, locale: Locale, fallbackLocale: Locale): string[] | undefined {
+  const localeLabels = readConfigLabelArray(question.config[locale === 'en' ? 'labelsEn' : 'labelsKo']);
+  const fallbackLabels = readConfigLabelArray(question.config[fallbackLocale === 'en' ? 'labelsEn' : 'labelsKo']);
+  const koreanLabels = readConfigLabelArray(question.config.labelsKo);
+
+  return localeLabels ?? fallbackLabels ?? koreanLabels;
+}
+
 export function readScaleValue(value: unknown): ScaleValue {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as ScaleValue) : {};
+}
+
+function readConfigLabelArray(value: unknown): string[] | undefined {
+  if (Array.isArray(value)) {
+    const labels = value.map((label) => (typeof label === 'string' ? label.trim() : '')).slice(0, 5);
+
+    return labels.length === 5 && labels.some(Boolean) ? labels : undefined;
+  }
+
+  if (typeof value !== 'object' || value === null) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+  const labels = [1, 2, 3, 4, 5].map((score) => {
+    const label = record[String(score)] ?? record[`score${score}`];
+    return typeof label === 'string' ? label.trim() : '';
+  });
+
+  return labels.some(Boolean) ? labels : undefined;
 }
