@@ -9,6 +9,15 @@ import { publishedSurveyFixture } from '../../../../../../test/fixtures/publicSu
 import { renderWithProviders } from '../../../../../../test/renderWithProviders';
 import { ParticipantImageTagQuestion } from '../ParticipantImageTagQuestion';
 
+vi.mock('../../../../../../utils/participantImageUpload', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../../../utils/participantImageUpload')>();
+
+  return {
+    ...actual,
+    prepareParticipantImageUploadFile: vi.fn(async (file: File) => file),
+  };
+});
+
 describe('ParticipantImageTagQuestion', () => {
   const question: PublicQuestion = {
     ...publishedSurveyFixture.sections[1].questions[0],
@@ -61,6 +70,27 @@ describe('ParticipantImageTagQuestion', () => {
     const pin = await screen.findByRole('button', { name: '1번 위치 수정' });
     expect(pin).toHaveStyle({ left: '50%', top: '25%' });
     expect(container.querySelector('.image-tag-question__sticker-hint')).not.toBeInTheDocument();
+  });
+
+  it('blocks participant image uploads over the storage bucket limit before upload', async () => {
+    const user = userEvent.setup();
+    const uploadQuestionImage = vi.fn();
+
+    renderWithProviders(<Harness question={question} />, {
+      controller: createFakeParticipantApiController({ uploadQuestionImage }),
+    });
+
+    const oversizedFile = new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'large.png', { type: 'image/png' });
+    await user.upload(screen.getByLabelText('사진 업로드'), oversizedFile);
+
+    expect(await screen.findByText('5MB 이하의 이미지만 업로드할 수 있습니다.')).toBeInTheDocument();
+    expect(uploadQuestionImage).not.toHaveBeenCalled();
+  });
+
+  it('defaults participant image uploads to the storage bucket mime types', () => {
+    renderWithProviders(<Harness question={{ ...question, config: { ...question.config, acceptedMimeTypes: undefined } }} />);
+
+    expect(screen.getByLabelText('사진 업로드')).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp');
   });
 });
 

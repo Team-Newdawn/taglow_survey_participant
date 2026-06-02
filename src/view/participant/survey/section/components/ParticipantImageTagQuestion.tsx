@@ -4,6 +4,13 @@ import type { PointerEvent } from 'react';
 import type { ParticipantImageTagPoint, ParticipantImageTagValue, SurveyAsset } from '../../../../../api/participant';
 import { useAssetUrlQuery, useParticipantQuestionImageUploadMutation } from '../../../../../api/participant';
 import { calculateImageRatio } from '../../../../../utils/imageRatio';
+import {
+  isAllowedParticipantImageMimeType,
+  mimeTypeMatches,
+  PARTICIPANT_IMAGE_UPLOAD_MAX_BYTES,
+  PARTICIPANT_IMAGE_UPLOAD_MIME_TYPES,
+  prepareParticipantImageUploadFile,
+} from '../../../../../utils/participantImageUpload';
 import { getSurveyLocaleCopy } from '../../surveyLocaleCopy';
 import { ImageTagPointDialog } from './ImageTagPointDialog';
 import { QuestionShell } from './QuestionShell';
@@ -29,14 +36,16 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
   const [fileError, setFileError] = useState<string | null>(null);
   const [editor, setEditor] = useState<ParticipantImageTagEditor | null>(null);
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
+  const [isPreparingUpload, setIsPreparingUpload] = useState(false);
   const uploadMutation = useParticipantQuestionImageUploadMutation();
   const value = readParticipantImageTagValue(props.value);
   const points = value.points ?? [];
   const copy = getSurveyLocaleCopy(props.locale);
   const maxTags = readNumber(props.question.config.maxTags) ?? readNumber(props.question.validation.maxSelections) ?? 3;
   const tagTypes = getImageTagOptions(props.question, props.locale, props.fallbackLocale);
-  const accept = getAcceptAttribute(props.question.config.acceptedMimeTypes);
-  const maxFileSizeMb = readNumber(props.question.config.maxFileSizeMb) ?? 10;
+  const acceptedMimeTypes = getAcceptedMimeTypes(props.question.config.acceptedMimeTypes);
+  const accept = acceptedMimeTypes.join(',');
+  const maxFileSizeBytes = readMaxFileSizeBytes(props.question.config.maxFileSizeMb);
   const isTagTextRequired = props.question.validation.requiredTagText === true || props.question.config.requireText === true;
   const uploadedAsset = toUploadedAsset(value, props.question.surveyId);
   const uploadedUrlQuery = useAssetUrlQuery(uploadedAsset);
@@ -60,16 +69,21 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
     setEditor(null);
   };
 
-  const uploadFile = (file: File) => {
-    const validationError = validateFile(file, accept, maxFileSizeMb, props.locale);
+  const uploadFile = async (file: File) => {
+    const validationError = validateFile(file, acceptedMimeTypes, maxFileSizeBytes, props.locale);
     setFileError(validationError);
 
     if (validationError) {
       return;
     }
 
+    setIsPreparingUpload(true);
+    const preparedFile = await prepareParticipantImageUploadFile(file, { acceptedMimeTypes }).finally(() => {
+      setIsPreparingUpload(false);
+    });
+
     uploadMutation.mutate(
-      { surveyId: props.question.surveyId, questionId: props.question.id, file },
+      { surveyId: props.question.surveyId, questionId: props.question.id, file: preparedFile },
       {
         onSuccess: (uploaded) => {
           props.onChange({
@@ -171,13 +185,13 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
               aria-label={copy.uploadImageLabel}
               type="file"
               accept={accept}
-              disabled={uploadMutation.isPending}
+              disabled={uploadMutation.isPending || isPreparingUpload}
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 event.target.value = '';
 
                 if (file) {
-                  uploadFile(file);
+                  void uploadFile(file);
                 }
               }}
             />
@@ -185,6 +199,7 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
         </div>
 
         <p>{copy.participantImageInstruction}</p>
+        {isPreparingUpload ? <p>{copy.participantImagePreparing}</p> : null}
         {fileError ? <p className="image-tag-question__error">{fileError}</p> : null}
         {uploadMutation.isError ? <p className="image-tag-question__error">{copy.uploadError}</p> : null}
         {uploadedUrlQuery.isError ? <p className="image-tag-question__error">{copy.uploadedImageLoadError}</p> : null}
@@ -277,39 +292,44 @@ function toUploadedAsset(value: ParticipantImageTagValue, surveyId: string): Sur
   };
 }
 
-function validateFile(file: File, accept: string, maxFileSizeMb: number, locale: 'ko' | 'en'): string | null {
+function validateFile(file: File, acceptedMimeTypes: string[], maxFileSizeBytes: number, locale: 'ko' | 'en'): string | null {
   const copy = getSurveyLocaleCopy(locale);
 
   if (!file.type.startsWith('image/')) {
     return copy.imageOnlyError;
   }
 
-  if (!accept.split(',').some((mimeType) => mimeTypeMatches(mimeType.trim(), file.type))) {
+  if (!isAllowedParticipantImageMimeType(file.type) || !acceptedMimeTypes.some((mimeType) => mimeTypeMatches(mimeType.trim(), file.type))) {
     return copy.unsupportedImageType;
   }
 
-  if (file.size > maxFileSizeMb * 1024 * 1024) {
-    return copy.maxImageSizeError(maxFileSizeMb);
+  if (file.size > maxFileSizeBytes) {
+    return copy.maxImageSizeError(maxFileSizeBytes / 1024 / 1024);
   }
 
   return null;
 }
 
-function mimeTypeMatches(accepted: string, actual: string): boolean {
-  if (!accepted || accepted === '*/*') {
-    return true;
+function getAcceptedMimeTypes(value: unknown): string[] {
+  const acceptedMimeTypes = readStringArray(value);
+  if (acceptedMimeTypes.length === 0) {
+    return [...PARTICIPANT_IMAGE_UPLOAD_MIME_TYPES];
   }
 
-  if (accepted.endsWith('/*')) {
-    return actual.startsWith(accepted.slice(0, -1));
-  }
+  const supportedMimeTypes = acceptedMimeTypes.filter((mimeType) =>
+    PARTICIPANT_IMAGE_UPLOAD_MIME_TYPES.some((allowed) => mimeTypeMatches(mimeType, allowed)),
+  );
 
-  return accepted === actual;
+  return supportedMimeTypes.length > 0 ? supportedMimeTypes : [...PARTICIPANT_IMAGE_UPLOAD_MIME_TYPES];
 }
 
-function getAcceptAttribute(value: unknown): string {
-  const acceptedMimeTypes = readStringArray(value);
-  return acceptedMimeTypes.length > 0 ? acceptedMimeTypes.join(',') : 'image/*';
+function readMaxFileSizeBytes(value: unknown): number {
+  const configuredMaxFileSizeMb = readNumber(value);
+  if (!configuredMaxFileSizeMb) {
+    return PARTICIPANT_IMAGE_UPLOAD_MAX_BYTES;
+  }
+
+  return Math.min(configuredMaxFileSizeMb * 1024 * 1024, PARTICIPANT_IMAGE_UPLOAD_MAX_BYTES);
 }
 
 function readStringArray(value: unknown): string[] {
