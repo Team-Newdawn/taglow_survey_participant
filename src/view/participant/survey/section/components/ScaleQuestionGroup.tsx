@@ -60,8 +60,8 @@ export function ScaleQuestionGroup(props: ScaleQuestionGroupProps) {
           const isExpanded = expandedQuestionId === question.id;
           const error = props.missingQuestionIds.includes(question.id) ? copy.requiredQuestion : undefined;
           const panelId = `${question.id}-scale-panel`;
-          const lowScoreThreshold = readLowScoreThreshold(question);
           const labels = readScaleLabels(question, props.locale, props.fallbackLocale);
+          const lowScoreThreshold = readLowScoreThreshold(question, labels);
 
           return (
             <div key={question.id} className={`scale-question-group__item${error ? ' has-error' : ''}`}>
