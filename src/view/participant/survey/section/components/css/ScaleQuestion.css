@@ -17,6 +17,9 @@
 }
 
 .scale-question__buttons button {
+  display: grid;
+  place-items: center;
+  gap: var(--space-1);
   aspect-ratio: 1;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -25,8 +28,32 @@
   font-weight: var(--font-weight-bold);
 }
 
+.scale-question__buttons.has-configured-labels button {
+  aspect-ratio: auto;
+  min-height: 72px;
+  padding: var(--space-2) var(--space-1);
+}
+
+.scale-question__score {
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+}
+
+.scale-question__score-label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-caption);
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
 .scale-question__buttons button.is-selected {
   border-color: var(--color-brand-600);
   background: var(--color-brand-600);
+  color: var(--color-bg);
+}
+
+.scale-question__buttons button.is-selected .scale-question__score-label {
   color: var(--color-bg);
 }

@@ -35,19 +35,21 @@ export function ParticipantLoginPage() {
   return (
     <main className="participant-login-page">
       <header className="participant-login-page__top">
-        <div className="participant-login-page__logo-row">
-          <img src={taglowLogoUrl} alt="Taglow" className="participant-login-page__logo" />
-          <img src={newdawnDomunionLogoUrl} alt="Newdawn Domunion" className="participant-login-page__partner-logo" />
-        </div>
+        <img src={taglowLogoUrl} alt="Taglow" className="participant-login-page__logo" />
+        <img src={newdawnDomunionLogoUrl} alt="Newdawn Domunion" className="participant-login-page__partner-logo" />
       </header>
 
-      <section className="participant-login-page__body" aria-labelledby="participant-login-title">
-        <div className="participant-login-page__intro">
-          <h1 id="participant-login-title">목소리를 더 선명하게 모읍니다.</h1>
-          <p id="participant-login-description">Taglow는 현장의 의견을 기록하고 필요한 변화를 찾도록 돕는 피드백 플랫폼입니다.</p>
-        </div>
-
-     
+      <section
+        className="participant-login-page__body"
+        aria-labelledby="participant-login-title"
+        aria-describedby="participant-login-description participant-login-collaboration"
+      >
+        <h1 id="participant-login-title">목소리를 더 선명하게 모읍니다.</h1>
+        <p id="participant-login-description">Taglow는 현장의 의견을 기록하고 필요한 변화를 찾도록 돕는 피드백 플랫폼입니다.</p>
+        <p id="participant-login-collaboration">
+          이번 설문은 <strong>한동대학교 자치회</strong>와 <strong>뉴던</strong>의 협업으로 진행됩니다. 설문 내용은{' '}
+          <strong>자치회</strong>에서 제공하였고, 플랫폼은 <strong>뉴던</strong>에서 제공합니다.
+        </p>
       </section>
 
       <footer className="participant-login-page__bottom">

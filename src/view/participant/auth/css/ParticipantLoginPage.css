@@ -15,16 +15,10 @@
 .participant-login-page__top {
   grid-area: top;
   display: flex;
-  align-items: flex-start;
-}
-
-.participant-login-page__logo-row {
-  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   width: 100%;
-  max-width: 100%;
 }
 
 .participant-login-page__logo {
@@ -38,31 +32,32 @@
 }
 
 .participant-login-page__body {
+  grid-area: body;
   align-self: center;
-
-}
-
-.articipant-login-title{
-  padding-bottom: var(--space-3);
-}
-
-.participant-login-description{
-  padding-top: 200px;
-}
-
-.participant-login-page__intro {
   display: grid;
   gap: var(--space-4);
 }
 
-.participant-login-page h1 {
+.participant-login-page__body h1 {
   margin: 0;
   font-size: var(--font-size-display);
   line-height: var(--line-height-display);
 }
 
-.participant-login-page p {
+.participant-login-page__body p {
   margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+}
+
+.participant-login-page__body p + p {
+  margin-top: var(--space-2);
+}
+
+.participant-login-page__body strong {
+  color: var(--color-text);
+  font-weight: 700;
 }
 
 .participant-login-page__bottom {

@@ -26,6 +26,33 @@ describe('ScaleQuestion', () => {
     expect(onChange).toHaveBeenCalledWith({ scoreValue: 5 });
   });
 
+  it('renders configured Korean scale labels from question config without changing the answer value', async () => {
+    const onChange = vi.fn();
+    render(
+      <ScaleQuestion
+        question={{
+          ...question,
+          config: {
+            ...question.config,
+            labelsKo: ['전혀 아님', '아님', '보통', '그럼', '매우 그럼'],
+          },
+        }}
+        assets={[]}
+        locale="ko"
+        fallbackLocale="ko"
+        value={{}}
+        onChange={onChange}
+      />,
+    );
+
+    expect(screen.getByText('전혀 아님')).toBeInTheDocument();
+    expect(screen.getByText('매우 그럼')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '5 매우 그럼' }));
+
+    expect(onChange).toHaveBeenCalledWith({ scoreValue: 5 });
+  });
+
   it('shows low-score follow-up for score 1 or 2', () => {
     render(
       <ScaleQuestion
