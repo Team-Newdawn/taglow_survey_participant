@@ -38,11 +38,6 @@ export const multiSelectAnswerSchema = z.object({
   valueJson: multiSelectValueJsonSchema,
 });
 
-export const matrixMultiSelectAnswerSchema = z.object({
-  answerType: z.literal('matrix_multi_select'),
-  valueJson: multiSelectValueJsonSchema,
-});
-
 export const rankingAnswerSchema = z.object({
   answerType: z.literal('ranking'),
   valueJson: z.object({
@@ -101,7 +96,6 @@ export const answerInputSchema = z.discriminatedUnion('answerType', [
   scaleAnswerSchema,
   singleChoiceAnswerSchema,
   multiSelectAnswerSchema,
-  matrixMultiSelectAnswerSchema,
   rankingAnswerSchema,
   textAnswerSchema,
   imageTagAnswerSchema,

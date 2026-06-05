@@ -346,7 +346,7 @@ describe('buildSubmissionAnswers', () => {
     expect(buildSubmissionAnswers(survey, { 'available-times': { selectedOptions: ['mon_05_00_07_00'] } })).toEqual([
       expect.objectContaining({
         questionId: 'available-times',
-        answerType: 'matrix_multi_select',
+        answerType: 'multi_select',
         valueJson: {
           selectedOptions: ['mon_05_00_07_00'],
           otherText: null,
