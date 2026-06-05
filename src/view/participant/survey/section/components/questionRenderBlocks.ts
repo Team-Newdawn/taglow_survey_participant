@@ -29,20 +29,34 @@ export type QuestionRenderBlock =
 
 export function buildQuestionRenderBlocks(questions: PublicQuestion[]): QuestionRenderBlock[] {
   const blocks: QuestionRenderBlock[] = [];
+  const handledProfileFields = new Set<ProfileFieldKey>();
   let index = 0;
 
   while (index < questions.length) {
     const question = questions[index];
+    const profileFieldKey = question.questionType === 'profile' ? resolveProfileFieldKey(question) : undefined;
+
+    if (profileFieldKey) {
+      if (handledProfileFields.has(profileFieldKey)) {
+        index += 1;
+        continue;
+      }
+
+      handledProfileFields.add(profileFieldKey);
+    }
 
     if (isCompositeProfileQuestion(question)) {
+      const unhandledProfileFields = profileFieldKeys.filter((fieldKey) => !handledProfileFields.has(fieldKey));
+
       blocks.push(
-        ...profileFieldKeys.map((fieldKey) => ({
+        ...unhandledProfileFields.map((fieldKey) => ({
           type: 'profile_field' as const,
           id: `${question.id}-profile-${fieldKey}`,
           question,
           fieldKey,
         })),
       );
+      unhandledProfileFields.forEach((fieldKey) => handledProfileFields.add(fieldKey));
       index += 1;
       continue;
     }
