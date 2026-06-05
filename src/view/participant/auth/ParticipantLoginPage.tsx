@@ -13,6 +13,7 @@ import newdawnDomunionLogoUrl from '../../../assets/logo_newdawn_domunion.png';
 import taglowLogoUrl from '../../../assets/taglow_logo.png';
 import { Button } from '../../../components/Button';
 import { Message } from '../../../components/Message';
+import { resolveSystemLocale } from '../../../utils/systemLocale';
 import {
   buildAndroidBrowserIntentUrl,
   createGoogleOAuthHandoffUrl,
@@ -32,7 +33,7 @@ export function ParticipantLoginPage() {
   const surveyQuery = usePublicSurveyLoginPageQuery(publicSlug);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const locale = useMemo(() => resolveSystemLoginLocale(window.navigator), []);
+  const locale = useMemo(() => resolveSystemLocale(window.navigator), []);
   const loginContent = useMemo(() => getLoginPageContent(surveyQuery.data, locale), [surveyQuery.data, locale]);
   const isInAppBrowser = useMemo(() => isLikelyInAppBrowser(window.navigator.userAgent), []);
   const usesAndroidBrowserHandoff = useMemo(() => shouldUseAndroidBrowserHandoff(window.navigator.userAgent), []);
@@ -138,11 +139,6 @@ export function ParticipantLoginPage() {
       </footer>
     </main>
   );
-}
-
-function resolveSystemLoginLocale(navigator: Navigator): Locale {
-  const languages = navigator.languages?.length ? navigator.languages : [navigator.language];
-  return languages[0]?.toLowerCase().startsWith('ko') ? 'ko' : 'en';
 }
 
 function readAssetUrl(assetUrls: Record<string, string> | undefined, assetId: string | undefined): string | undefined {

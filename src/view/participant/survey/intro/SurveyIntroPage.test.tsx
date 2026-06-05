@@ -1,5 +1,4 @@
 import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppRoutes } from '../../../../app/router';
@@ -11,8 +10,12 @@ import { publishedSurveyFixture } from '../../../../test/fixtures/publicSurveyFi
 import { renderWithProviders } from '../../../../test/renderWithProviders';
 
 describe('SurveyIntroPage', () => {
+  const originalLanguage = window.navigator.language;
+  const originalLanguages = window.navigator.languages;
+
   beforeEach(() => {
     vi.stubEnv('DEV', true);
+    setNavigatorLanguages(['ko-KR']);
     window.localStorage.clear();
     useParticipantDraftStore.getState().clearDraftValues();
     useParticipantLocaleStore.getState().setLocale('ko');
@@ -21,6 +24,7 @@ describe('SurveyIntroPage', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    setNavigatorLanguages(originalLanguages.length > 0 ? Array.from(originalLanguages) : [originalLanguage]);
   });
 
   it('renders the admin-configured survey description inside the intro card', async () => {
@@ -38,9 +42,9 @@ describe('SurveyIntroPage', () => {
 
     const introDescription = screen.getByText(/관리자가 작성한 설문 안내입니다/);
     const introCard = introDescription.closest('.survey-intro-page__card');
-    const languageHeading = screen.getByRole('heading', { name: '언어' });
     expect(introCard).toBeInTheDocument();
-    expect(languageHeading.compareDocumentPosition(introDescription) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: '언어' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'English' })).not.toBeInTheDocument();
     expect(introCard).toHaveTextContent('관리자가 작성한 설문 안내입니다. 참여 전 확인해주세요.');
     expect(screen.queryByText('응답 전 확인해주세요.')).not.toBeInTheDocument();
     expect(screen.queryByText('약 7~10분 정도 소요될 수 있습니다.')).not.toBeInTheDocument();
@@ -71,7 +75,9 @@ describe('SurveyIntroPage', () => {
     expect(wwwLink).toHaveAttribute('href', 'https://www.newdawn.co.kr/contact');
   });
 
-  it('switches the survey intro description to English when the English version exists', async () => {
+  it('renders the intro from database English text when the system language is not Korean', async () => {
+    setNavigatorLanguages(['en-US']);
+
     const survey = {
       ...publishedSurveyFixture,
       sections: [
@@ -98,19 +104,19 @@ describe('SurveyIntroPage', () => {
       controller: createFakeParticipantApiController({ survey }),
     });
 
-    await waitFor(() => expect(screen.getByRole('heading', { name: '생활관 정기 설문조사' })).toBeInTheDocument());
-    expect(screen.getByText('한국어 설문 소개입니다.')).toBeInTheDocument();
-    expect(document.querySelector('.survey-intro-page__sections')).not.toHaveTextContent('설문 안내');
-
-    await userEvent.click(screen.getByRole('button', { name: 'English' }));
-
-    expect(screen.getByRole('heading', { name: 'Dormitory Survey' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Dormitory Survey' })).toBeInTheDocument());
+    expect(screen.getByText('Sections to complete')).toBeInTheDocument();
     expect(screen.getByText('This is the English survey introduction.')).toBeInTheDocument();
     expect(screen.queryByText('한국어 설문 소개입니다.')).not.toBeInTheDocument();
     expect(document.querySelector('.survey-intro-page__sections')).not.toHaveTextContent('Survey guide');
+    expect(document.querySelector('.survey-intro-page__sections')).toHaveTextContent('Profile');
+    expect(document.querySelector('.survey-intro-page__sections')).toHaveTextContent('Facilities');
+    expect(useParticipantLocaleStore.getState().locale).toBe('en');
   });
 
-  it('uses the survey English description when the English locale is selected', async () => {
+  it('uses the survey English description when the system language is not Korean', async () => {
+    setNavigatorLanguages(['ja-JP']);
+
     const survey = {
       ...publishedSurveyFixture,
       description: {
@@ -124,11 +130,7 @@ describe('SurveyIntroPage', () => {
       controller: createFakeParticipantApiController({ survey }),
     });
 
-    await waitFor(() => expect(screen.getByText('한국어 설문 설명입니다.')).toBeInTheDocument());
-
-    await userEvent.click(screen.getByRole('button', { name: 'English' }));
-
-    expect(screen.getByText('This is the English survey description.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('This is the English survey description.')).toBeInTheDocument());
     expect(screen.queryByText('한국어 설문 설명입니다.')).not.toBeInTheDocument();
   });
 
@@ -167,3 +169,14 @@ describe('SurveyIntroPage', () => {
     expect(screen.queryByRole('link', { name: /생활관 시설/ })).not.toBeInTheDocument();
   });
 });
+
+function setNavigatorLanguages(languages: string[]) {
+  Object.defineProperty(window.navigator, 'language', {
+    configurable: true,
+    value: languages[0] ?? '',
+  });
+  Object.defineProperty(window.navigator, 'languages', {
+    configurable: true,
+    value: languages,
+  });
+}

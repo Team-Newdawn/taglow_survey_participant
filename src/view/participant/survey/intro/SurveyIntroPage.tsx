@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import {
   SURVEY_DRAFT_SCHEMA_VERSION,
+  type Locale,
   useSurveyDraftStorage,
   useParticipantSessionQuery,
   usePublicSurveyQuery,
@@ -16,7 +17,8 @@ import { useParticipantDraftStore } from '../../../../store/participantDraftStor
 import { useParticipantLocaleStore } from '../../../../store/participantLocaleStore';
 import { useParticipantProgressStore } from '../../../../store/participantProgressStore';
 import { formatShortDateTime } from '../../../../utils/dateTime';
-import { readLocalizedText, resolveSurveyDefaultLocale } from '../../../../utils/i18nText';
+import { readLocalizedText } from '../../../../utils/i18nText';
+import { resolveSystemLocale } from '../../../../utils/systemLocale';
 import { DraftRestoreBanner } from '../components/DraftRestoreBanner';
 import { getAnswerSections, isIntroSection } from '../surveySections';
 import { getSurveyLocaleCopy } from '../surveyLocaleCopy';
@@ -29,19 +31,22 @@ export function SurveyIntroPage() {
   const navigate = useNavigate();
   const surveyQuery = usePublicSurveyQuery(publicSlug);
   const sessionQuery = useParticipantSessionQuery();
-  const { locale, setLocale } = useParticipantLocaleStore();
+  const { setLocale } = useParticipantLocaleStore();
   const { hydrateDraft, clearDraftValues, setRestoreDraftUpdatedAt } = useParticipantDraftStore();
   const { setCurrentSectionKey, resetProgress } = useParticipantProgressStore();
   const [draft, setDraft] = useState<SurveyDraft | null>(null);
   const draftStorage = useSurveyDraftStorage();
   const survey = surveyQuery.data;
   const session = sessionQuery.data;
-  const defaultLocale = resolveSurveyDefaultLocale(survey);
-  const displayLocale = locale ?? defaultLocale;
+  const displayLocale = useMemo(() => resolveSystemLocale(window.navigator), []);
   const answerSections = getAnswerSections(survey);
   const firstSection = answerSections[0];
   const copy = getSurveyLocaleCopy(displayLocale);
   const canOpenSectionShortcuts = import.meta.env.DEV;
+
+  useEffect(() => {
+    setLocale(displayLocale);
+  }, [displayLocale, setLocale]);
 
   useEffect(() => {
     if (!survey || !session) {
@@ -62,7 +67,7 @@ export function SurveyIntroPage() {
     return null;
   }
 
-  const surveyDescription = readSurveyIntroDescription(survey, displayLocale, defaultLocale);
+  const surveyDescription = readSurveyIntroDescription(survey, displayLocale);
 
   const startFresh = async () => {
     if (survey && session) {
@@ -84,11 +89,11 @@ export function SurveyIntroPage() {
     const section = answerSections.find((item) => item.id === draft.currentSectionId) ?? firstSection;
     hydrateDraft({
       values: draft.values,
-      locale: draft.locale,
+      locale: displayLocale,
       currentSectionId: draft.currentSectionId,
       updatedAt: draft.updatedAt,
     });
-    setLocale(draft.locale);
+    setLocale(displayLocale);
     setCurrentSectionKey(section?.sectionKey);
     navigate(section ? `/survey/${publicSlug}/sections/${section.sectionKey}` : `/survey/${publicSlug}/review`);
   };
@@ -97,7 +102,7 @@ export function SurveyIntroPage() {
     <main className="survey-intro-page">
       <header className="survey-intro-page__header">
         <p className="survey-intro-page__eyebrow">{copy.introEyebrow}</p>
-        <h1>{readLocalizedText(survey.title, displayLocale, defaultLocale)}</h1>
+        <h1>{readIntroLocalizedText(survey.title, displayLocale, copy.introEyebrow)}</h1>
       </header>
 
       {draft ? (
@@ -109,18 +114,6 @@ export function SurveyIntroPage() {
         />
       ) : null}
 
-      <section className="survey-intro-page__card">
-        <h2>{copy.language}</h2>
-        <div className="survey-intro-page__locale">
-          <button type="button" className={displayLocale === 'ko' ? 'is-selected' : ''} onClick={() => setLocale('ko')}>
-            한국어
-          </button>
-          <button type="button" className={displayLocale === 'en' ? 'is-selected' : ''} onClick={() => setLocale('en')}>
-            English
-          </button>
-        </div>
-      </section>
-
       {surveyDescription ? (
         <section className="survey-intro-page__card">
           <p className="survey-intro-page__description">{renderTextWithLinks(surveyDescription)}</p>
@@ -130,7 +123,7 @@ export function SurveyIntroPage() {
       <section className="survey-intro-page__sections">
         <h2>{copy.sectionsToComplete}</h2>
         {answerSections.map((section, index) => {
-          const sectionTitle = readLocalizedText(section.title, displayLocale, defaultLocale);
+          const sectionTitle = readIntroLocalizedText(section.title, displayLocale, section.sectionKey);
           const sectionContent = (
             <>
               <span className="survey-intro-page__section-index">{index + 1}</span>
@@ -163,25 +156,26 @@ export function SurveyIntroPage() {
   );
 }
 
-function readSurveyIntroDescription(survey: PublicSurvey, locale: 'ko' | 'en', fallbackLocale: 'ko' | 'en'): string {
+function readSurveyIntroDescription(survey: PublicSurvey, locale: Locale): string {
   const introSection = survey.sections.find(isIntroSection);
   const candidates = [introSection?.description, survey.description];
 
   for (const candidate of candidates) {
-    const localized = candidate?.[locale]?.trim();
+    const localized = readIntroLocalizedText(candidate, locale);
     if (localized) {
       return localized;
     }
   }
 
-  for (const candidate of candidates) {
-    const fallback = readLocalizedText(candidate, locale, fallbackLocale).trim();
-    if (fallback) {
-      return fallback;
-    }
+  return '';
+}
+
+function readIntroLocalizedText(text: PublicSurvey['title'] | undefined, locale: Locale, fallback = ''): string {
+  if (locale === 'ko') {
+    return readLocalizedText(text, 'ko', 'ko').trim() || fallback;
   }
 
-  return '';
+  return text?.en?.trim() || fallback;
 }
 
 function renderTextWithLinks(text: string): ReactNode[] {
