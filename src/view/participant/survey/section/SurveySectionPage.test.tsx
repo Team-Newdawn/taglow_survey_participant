@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppRoutes } from '../../../../app/router';
 import { useParticipantDraftStore } from '../../../../store/participantDraftStore';
@@ -13,9 +13,14 @@ import { renderWithProviders } from '../../../../test/renderWithProviders';
 describe('SurveySectionPage', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
     useParticipantDraftStore.getState().clearDraftValues();
     useParticipantLocaleStore.getState().setLocale('ko');
     useParticipantProgressStore.getState().resetProgress();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('renders the section form and mirrors answer changes into the draft snapshot', async () => {
@@ -203,6 +208,7 @@ describe('SurveySectionPage', () => {
 
   it('scrolls the section body to the top when moving to the next section', async () => {
     const survey = buildTwoScaleSectionSurvey();
+    const scrollTo = vi.mocked(window.scrollTo);
 
     renderWithProviders(<AppRoutes />, {
       route: '/survey/fixture-survey/sections/facility',
@@ -210,6 +216,40 @@ describe('SurveySectionPage', () => {
     });
 
     expect(await screen.findByText('세탁실 만족도는 어떤가요?')).toBeInTheDocument();
+    scrollTo.mockClear();
+
+    const body = document.querySelector<HTMLDivElement>('.survey-section-page__body');
+    expect(body).toBeTruthy();
+    if (!body) {
+      return;
+    }
+
+    body.scrollTop = 240;
+    document.documentElement.scrollTop = 240;
+    document.body.scrollTop = 240;
+
+    await userEvent.click(screen.getByRole('button', { name: '5' }));
+    await userEvent.click(screen.getByRole('button', { name: '다음' }));
+
+    expect(await screen.findByText('두 번째 섹션 만족도는 어떤가요?')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(body.scrollTop).toBe(0);
+      expect(document.documentElement.scrollTop).toBe(0);
+      expect(document.body.scrollTop).toBe(0);
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'auto' });
+    });
+  });
+
+  it('opens the top answer panel after moving to the next section', async () => {
+    const survey = buildTwoSectionSurveyWithScaleGroupSecond();
+
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/sections/facility',
+      controller: createFakeParticipantApiController({ survey }),
+    });
+
+    expect(await screen.findByText('첫 번째 섹션 만족도는 어떤가요?')).toBeInTheDocument();
 
     const body = document.querySelector<HTMLDivElement>('.survey-section-page__body');
     expect(body).toBeTruthy();
@@ -222,7 +262,10 @@ describe('SurveySectionPage', () => {
     await userEvent.click(screen.getByRole('button', { name: '5' }));
     await userEvent.click(screen.getByRole('button', { name: '다음' }));
 
-    expect(await screen.findByText('두 번째 섹션 만족도는 어떤가요?')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /^1\. 두 번째 섹션 만족도/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /첫 번째 항목/ })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /두 번째 항목/ })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: '1' })).toBeInTheDocument();
 
     await waitFor(() => {
       expect(body.scrollTop).toBe(0);
@@ -321,6 +364,61 @@ function buildTwoScaleSectionSurvey() {
             sectionId: 'section-second-scale',
             questionKey: 'second_scale',
             title: { ko: '두 번째 섹션 만족도는 어떤가요?' },
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function buildTwoSectionSurveyWithScaleGroupSecond() {
+  const facilitySection = publishedSurveyFixture.sections[1];
+  const baseScaleQuestion = facilitySection.questions[0];
+  const displayGroup = '두 번째 섹션 만족도';
+
+  return {
+    ...publishedSurveyFixture,
+    sections: [
+      {
+        ...facilitySection,
+        id: 'section-first-scale',
+        sectionKey: 'facility',
+        title: { ko: '첫 번째 섹션' },
+        orderIndex: 0,
+        questions: [
+          {
+            ...baseScaleQuestion,
+            id: 'question-first-scale',
+            sectionId: 'section-first-scale',
+            questionKey: 'first_scale',
+            title: { ko: '첫 번째 섹션 만족도는 어떤가요?' },
+          },
+        ],
+      },
+      {
+        ...facilitySection,
+        id: 'section-second-scale-group',
+        sectionKey: 'facility-next',
+        title: { ko: '두 번째 섹션' },
+        orderIndex: 1,
+        questions: [
+          {
+            ...baseScaleQuestion,
+            id: 'question-second-scale-first',
+            sectionId: 'section-second-scale-group',
+            questionKey: 'second_scale_first',
+            title: { ko: `${displayGroup} [(1) 첫 번째 항목]` },
+            orderIndex: 0,
+            config: { ...baseScaleQuestion.config, displayGroup },
+          },
+          {
+            ...baseScaleQuestion,
+            id: 'question-second-scale-second',
+            sectionId: 'section-second-scale-group',
+            questionKey: 'second_scale_second',
+            title: { ko: `${displayGroup} [(2) 두 번째 항목]` },
+            orderIndex: 1,
+            config: { ...baseScaleQuestion.config, displayGroup },
           },
         ],
       },

@@ -56,7 +56,9 @@ export function useSectionNavigation(args: UseSectionNavigationArgs) {
 
     markSectionCompleted(section.id);
     await saveDraft();
-    navigate(nextSection ? `/survey/${publicSlug}/sections/${nextSection.sectionKey}` : `/survey/${publicSlug}/review`);
+    navigate(nextSection ? `/survey/${publicSlug}/sections/${nextSection.sectionKey}` : `/survey/${publicSlug}/review`, {
+      state: nextSection ? { openFirstQuestionPanel: true } : undefined,
+    });
   }, [
     activeQuestionScreenIndex,
     hasNextQuestionScreen,

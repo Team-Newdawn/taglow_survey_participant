@@ -91,6 +91,18 @@ describe('participant route guards', () => {
   });
 
   it('routes same-device participants to already-submitted page before section entry', async () => {
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/intro',
+      controller: createFakeParticipantApiController({
+        session: { userId: 'other-user', email: 'other@example.com' },
+        duplicate: { alreadySubmitted: true, responseId: 'response-device' },
+      }),
+    });
+
+    await waitFor(() => expect(screen.getByText('이미 제출한 설문입니다.')).toBeInTheDocument());
+  });
+
+  it('ignores stale same-device markers when server access is allowed', async () => {
     markSurveySubmittedOnDevice('fixture-survey');
 
     renderWithProviders(<AppRoutes />, {
@@ -101,7 +113,7 @@ describe('participant route guards', () => {
       }),
     });
 
-    await waitFor(() => expect(screen.getByText('이미 제출한 설문입니다.')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('설문 안내')).toBeInTheDocument());
   });
 
 

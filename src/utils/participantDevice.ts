@@ -1,7 +1,7 @@
 const PARTICIPANT_DEVICE_ID_KEY = 'taglow-survey-device-id:v1';
 const SUBMITTED_SURVEY_MARKER_PREFIX = 'taglow-survey-submitted-device:v1:';
 
-type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
+type StorageLike = Pick<Storage, 'getItem' | 'setItem'> & Partial<Pick<Storage, 'removeItem'>>;
 
 let memoryDeviceId: string | undefined;
 
@@ -45,6 +45,19 @@ export function markSurveySubmittedOnDevice(publicSlug: string, storage: Storage
     storage.setItem(buildSubmittedSurveyMarkerKey(publicSlug), 'submitted');
   } catch {
     // The server-side device duplicate check remains the source of truth.
+  }
+}
+
+export function clearSurveySubmittedOnDevice(publicSlug: string, storage: StorageLike | undefined = readLocalStorage()): void {
+  const removeItem = storage?.removeItem?.bind(storage);
+  if (!publicSlug || !removeItem) {
+    return;
+  }
+
+  try {
+    removeItem(buildSubmittedSurveyMarkerKey(publicSlug));
+  } catch {
+    // Ignore storage failures; server duplicate state remains authoritative.
   }
 }
 

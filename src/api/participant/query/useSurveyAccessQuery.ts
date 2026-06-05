@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useParticipantApiController } from '../controller/participantApiControllerProvider';
-import { getOrCreateParticipantDeviceId, hasSurveySubmittedOnDevice } from '../../../utils/participantDevice';
+import { clearSurveySubmittedOnDevice, getOrCreateParticipantDeviceId } from '../../../utils/participantDevice';
 import { participantQueryKeys } from './queryKeys';
 import { useParticipantSessionQuery } from './useParticipantSessionQuery';
 
@@ -23,11 +23,11 @@ export function useSurveyAccessQuery(publicSlug: string | undefined) {
         return { status: 'unauthenticated' as const };
       }
 
-      if (publicSlug && hasSurveySubmittedOnDevice(publicSlug)) {
-        return { status: 'already_submitted' as const };
+      const access = await controller.checkAccess({ publicSlug: publicSlug ?? '', participantDeviceId });
+      if (publicSlug && access.status !== 'already_submitted') {
+        clearSurveySubmittedOnDevice(publicSlug);
       }
 
-      const access = await controller.checkAccess({ publicSlug: publicSlug ?? '', participantDeviceId });
       if (publicSlug && session && access.survey) {
         queryClient.setQueryData(participantQueryKeys.publicSurvey(publicSlug, session.userId), access.survey);
       }
