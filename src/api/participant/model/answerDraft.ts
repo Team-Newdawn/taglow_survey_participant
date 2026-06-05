@@ -1,6 +1,6 @@
 import type { MetricType, QuestionType } from './question';
 
-export type AnswerType = QuestionType;
+export type AnswerType = Exclude<QuestionType, 'matrix_multi_select'>;
 
 export type ImageTagPoint = Readonly<{
   assetId: string;
