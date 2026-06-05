@@ -11,11 +11,13 @@ import { useParticipantProgressStore } from '../../../../store/participantProgre
 import { findMissingRequiredQuestions } from '../../../../utils/answerNormalizer';
 import { formatShortDateTime } from '../../../../utils/dateTime';
 import { readLocalizedText, resolveSurveyDefaultLocale } from '../../../../utils/i18nText';
+import { normalizeProfileRecord, type ProfileFieldKey } from '../../../../utils/profileFields';
 import { DraftRestoreBanner } from '../components/DraftRestoreBanner';
 import { findAnswerSectionByKey, getAnswerSections } from '../surveySections';
 import { getSurveyLocaleCopy } from '../surveyLocaleCopy';
 import { useDraftAutosave } from './components/useDraftAutosave';
 import { MultiSelectQuestionGroup } from './components/MultiSelectQuestionGroup';
+import { ProfileQuestion } from './components/ProfileQuestion';
 import { useQuestionScreens } from './components/useQuestionScreens';
 import { QuestionRenderer } from './components/QuestionRenderer';
 import { ScaleQuestionGroup } from './components/ScaleQuestionGroup';
@@ -187,6 +189,29 @@ export function SurveySectionPage() {
               );
             }
 
+            if (block.type === 'profile_field') {
+              const value = form.watch(block.question.id);
+
+              return (
+                <ProfileQuestion
+                  key={block.id}
+                  question={block.question}
+                  assets={survey.assets}
+                  locale={displayLocale}
+                  fallbackLocale={defaultLocale}
+                  value={value}
+                  error={
+                    missingQuestionIds.includes(block.question.id) && isProfileFieldMissing(value, block.fieldKey) ? copy.requiredQuestion : undefined
+                  }
+                  number={renderBlockNumberById.get(block.id)}
+                  profileFieldKey={block.fieldKey}
+                  onChange={(nextValue) => {
+                    form.setValue(block.question.id, nextValue, { shouldDirty: true, shouldTouch: true });
+                  }}
+                />
+              );
+            }
+
             return (
               <QuestionRenderer
                 key={block.question.id}
@@ -217,6 +242,16 @@ export function SurveySectionPage() {
       </nav>
     </main>
   );
+}
+
+function isProfileFieldMissing(value: unknown, fieldKey: ProfileFieldKey): boolean {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return true;
+  }
+
+  const profile = normalizeProfileRecord(value as Record<string, unknown>);
+  const fieldValue = profile[fieldKey];
+  return typeof fieldValue !== 'string' || fieldValue.trim().length === 0;
 }
 
 function readGroupTitle(

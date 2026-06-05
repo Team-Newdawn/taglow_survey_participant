@@ -7,6 +7,7 @@ import type { ParticipantImageTagValue, PublicQuestion } from '../../../../../..
 import { createFakeParticipantApiController } from '../../../../../../test/fakeParticipantApiController';
 import { publishedSurveyFixture } from '../../../../../../test/fixtures/publicSurveyFixture';
 import { renderWithProviders } from '../../../../../../test/renderWithProviders';
+import { prepareParticipantImageUploadFile } from '../../../../../../utils/participantImageUpload';
 import { ParticipantImageTagQuestion } from '../ParticipantImageTagQuestion';
 
 vi.mock('../../../../../../utils/participantImageUpload', async (importOriginal) => {
@@ -85,6 +86,34 @@ describe('ParticipantImageTagQuestion', () => {
 
     expect(await screen.findByText('5MB 이하의 이미지만 업로드할 수 있습니다.')).toBeInTheDocument();
     expect(uploadQuestionImage).not.toHaveBeenCalled();
+  });
+
+  it('uploads the prepared image file after client-side compression', async () => {
+    const user = userEvent.setup();
+    const uploadQuestionImage = vi.fn(async () => ({
+      storageBucket: 'survey-assets',
+      storagePath: 'participant-uploads/upload-1.png',
+      signedUrl: 'https://example.com/uploaded.png',
+      metadata: { originalName: 'compressed.png' },
+    }));
+    const originalFile = new File(['large image'], 'large.png', { type: 'image/png' });
+    const compressedFile = new File(['compressed'], 'compressed.png', { type: 'image/png' });
+    vi.mocked(prepareParticipantImageUploadFile).mockResolvedValueOnce(compressedFile);
+
+    renderWithProviders(<Harness question={question} />, {
+      controller: createFakeParticipantApiController({ uploadQuestionImage }),
+    });
+
+    await user.upload(screen.getByLabelText('사진 업로드'), originalFile);
+
+    await waitFor(() => {
+      expect(prepareParticipantImageUploadFile).toHaveBeenCalledWith(originalFile, { acceptedMimeTypes: ['image/png'] });
+      expect(uploadQuestionImage).toHaveBeenCalledWith({
+        surveyId: 'survey-1',
+        questionId: 'question-upload-tag',
+        file: compressedFile,
+      });
+    });
   });
 
   it('defaults participant image uploads to the storage bucket mime types', () => {

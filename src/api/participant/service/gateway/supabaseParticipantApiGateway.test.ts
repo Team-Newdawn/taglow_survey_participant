@@ -239,4 +239,55 @@ describe('SupabaseParticipantApiGateway assets', () => {
     expect(from).toHaveBeenCalledWith('survey-assets');
     expect(createSignedUrls).toHaveBeenCalledWith(['floor/one.png', 'floor/two.png'], 60 * 60);
   });
+
+  it('uploads participant image files to storage and returns a signed URL', async () => {
+    const file = new File(['compressed image'], 'compressed.png', { type: 'image/png' });
+    const upload = vi.fn(async () => ({ error: null }));
+    const createSignedUrl = vi.fn(async () => ({
+      data: { signedUrl: 'https://example.com/participant-uploads/upload-1.png' },
+      error: null,
+    }));
+    const from = vi.fn(() => ({ upload, createSignedUrl }));
+    const getUser = vi.fn(async () => ({
+      data: { user: { id: 'user-1' } },
+      error: null,
+    }));
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000001');
+    const gateway = new SupabaseParticipantApiGateway({
+      auth: { getUser },
+      storage: { from },
+    } as unknown as SupabaseClient);
+
+    await expect(
+      gateway.uploadQuestionImage({
+        surveyId: 'survey-1',
+        questionId: 'question-upload-tag',
+        file,
+      }),
+    ).resolves.toEqual({
+      storage_bucket: 'survey-assets',
+      storage_path: 'participant-uploads/00000000-0000-4000-8000-000000000001.png',
+      signed_url: 'https://example.com/participant-uploads/upload-1.png',
+      metadata: {
+        originalName: 'compressed.png',
+        contentType: 'image/png',
+        size: file.size,
+      },
+    });
+
+    expect(from).toHaveBeenCalledWith('survey-assets');
+    expect(upload).toHaveBeenCalledWith('participant-uploads/00000000-0000-4000-8000-000000000001.png', file, {
+      cacheControl: '3600',
+      contentType: 'image/png',
+      metadata: {
+        surveyId: 'survey-1',
+        questionId: 'question-upload-tag',
+        originalName: 'compressed.png',
+        contentType: 'image/png',
+        size: file.size,
+      },
+      upsert: false,
+    });
+    expect(createSignedUrl).toHaveBeenCalledWith('participant-uploads/00000000-0000-4000-8000-000000000001.png', 60 * 60);
+  });
 });

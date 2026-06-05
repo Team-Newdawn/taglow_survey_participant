@@ -6,6 +6,7 @@ import { buildQuestionRenderBlocks } from '../questionRenderBlocks';
 
 const scaleQuestion = publishedSurveyFixture.sections[1].questions[0];
 const multiQuestion = publishedSurveyFixture.sections[1].questions[1];
+const profileQuestion = publishedSurveyFixture.sections[0].questions[0];
 
 describe('buildQuestionRenderBlocks', () => {
   it('groups consecutive scale questions that share the same displayGroup', () => {
@@ -92,6 +93,20 @@ describe('buildQuestionRenderBlocks', () => {
       questions: [questions[0], questions[1]],
     });
     expect(blocks[1]).toEqual({ type: 'question', question: questions[2] });
+  });
+
+  it('splits a composite profile question into individual profile field blocks', () => {
+    const blocks = buildQuestionRenderBlocks([profileQuestion]);
+
+    expect(blocks).toEqual([
+      { type: 'profile_field', id: 'question-profile-profile-gender', question: profileQuestion, fieldKey: 'gender' },
+      { type: 'profile_field', id: 'question-profile-profile-semesterGroup', question: profileQuestion, fieldKey: 'semesterGroup' },
+      { type: 'profile_field', id: 'question-profile-profile-department', question: profileQuestion, fieldKey: 'department' },
+      { type: 'profile_field', id: 'question-profile-profile-rc', question: profileQuestion, fieldKey: 'rc' },
+      { type: 'profile_field', id: 'question-profile-profile-dormitory', question: profileQuestion, fieldKey: 'dormitory' },
+      { type: 'profile_field', id: 'question-profile-profile-roomType', question: profileQuestion, fieldKey: 'roomType' },
+      { type: 'profile_field', id: 'question-profile-profile-dormExperience', question: profileQuestion, fieldKey: 'dormExperience' },
+    ]);
   });
 });
 

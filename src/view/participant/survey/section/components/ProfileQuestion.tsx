@@ -14,6 +14,10 @@ type ProfileFieldGroup = {
   options: Array<{ value: string; label: Record<Locale, string> }>;
 };
 
+type ProfileQuestionProps = QuestionComponentProps<unknown> & {
+  profileFieldKey?: ProfileFieldKey;
+};
+
 const fieldGroups: ProfileFieldGroup[] = [
   {
     key: 'gender',
@@ -89,14 +93,15 @@ const fieldGroups: ProfileFieldGroup[] = [
   },
 ];
 
-export function ProfileQuestion(props: QuestionComponentProps<unknown>) {
+export function ProfileQuestion(props: ProfileQuestionProps) {
   const value = readProfileValue(props.value);
-  const profileFieldKey = resolveProfileFieldKey(props.question);
-  const fields = profileFieldKey ? fieldGroups.filter((field) => field.key === profileFieldKey) : fieldGroups;
+  const profileFieldKey = props.profileFieldKey ?? resolveProfileFieldKey(props.question);
+  const fields = profileFieldKey ? fieldGroups.filter((field) => field.key === profileFieldKey) : [fieldGroups[0]];
+  const displayQuestion = profileFieldKey ? createProfileFieldQuestion(props.question, fields[0]) : props.question;
   const configuredOptions = getDisplayOptions(props.question, props.locale, props.fallbackLocale);
 
   return (
-    <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
+    <QuestionShell question={displayQuestion} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
       <div className="profile-question">
         {fields.map((field) => (
           <Select
@@ -110,6 +115,15 @@ export function ProfileQuestion(props: QuestionComponentProps<unknown>) {
       </div>
     </QuestionShell>
   );
+}
+
+function createProfileFieldQuestion(question: QuestionComponentProps['question'], field: ProfileFieldGroup): QuestionComponentProps['question'] {
+  return {
+    ...question,
+    id: `${question.id}-${field.key}`,
+    title: field.label,
+    description: undefined,
+  };
 }
 
 function readProfileValue(value: unknown): ProfileValue {

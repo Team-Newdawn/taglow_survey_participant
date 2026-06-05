@@ -1,4 +1,5 @@
 import type { Locale, PublicQuestion, SurveyAsset } from '../../../../../api/participant';
+import type { ProfileFieldKey } from '../../../../../utils/profileFields';
 import { AttentionCheckQuestion } from './AttentionCheckQuestion';
 import { ExperienceQuestion } from './ExperienceQuestion';
 import { ImageTagQuestion } from './ImageTagQuestion';
@@ -19,6 +20,7 @@ type QuestionRendererProps = {
   value: unknown;
   error?: string;
   number?: number;
+  profileFieldKey?: ProfileFieldKey;
   onChange: (value: unknown) => void;
 };
 

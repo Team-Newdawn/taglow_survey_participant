@@ -1,9 +1,16 @@
 import type { PublicQuestion } from '../../../../../api/participant';
+import { profileFieldKeys, resolveProfileFieldKey, type ProfileFieldKey } from '../../../../../utils/profileFields';
 
 export type QuestionRenderBlock =
   | Readonly<{
       type: 'question';
       question: PublicQuestion;
+    }>
+  | Readonly<{
+      type: 'profile_field';
+      id: string;
+      question: PublicQuestion;
+      fieldKey: ProfileFieldKey;
     }>
   | Readonly<{
       type: 'scale_group';
@@ -26,6 +33,20 @@ export function buildQuestionRenderBlocks(questions: PublicQuestion[]): Question
 
   while (index < questions.length) {
     const question = questions[index];
+
+    if (isCompositeProfileQuestion(question)) {
+      blocks.push(
+        ...profileFieldKeys.map((fieldKey) => ({
+          type: 'profile_field' as const,
+          id: `${question.id}-profile-${fieldKey}`,
+          question,
+          fieldKey,
+        })),
+      );
+      index += 1;
+      continue;
+    }
+
     const scaleGroupTitle = readScaleDisplayGroup(question);
 
     if (scaleGroupTitle) {
@@ -83,6 +104,10 @@ export function buildQuestionRenderBlocks(questions: PublicQuestion[]): Question
 
 export function getQuestionRenderBlockId(block: QuestionRenderBlock): string {
   return block.type === 'question' ? block.question.id : block.id;
+}
+
+function isCompositeProfileQuestion(question: PublicQuestion): boolean {
+  return question.questionType === 'profile' && !resolveProfileFieldKey(question);
 }
 
 function readScaleDisplayGroup(question: PublicQuestion): string | undefined {

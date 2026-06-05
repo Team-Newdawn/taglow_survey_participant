@@ -48,6 +48,21 @@ describe('SurveySectionPage', () => {
     expect(screen.queryByText('3/3섹션')).not.toBeInTheDocument();
   });
 
+  it('renders bundled profile fields as separate numbered questions', async () => {
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/sections/profile',
+    });
+
+    expect(await screen.findByRole('heading', { name: /^1\. 성별/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^2\. 학기/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^3\. 학부/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^4\. 소속 RC/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^5\. 거주 생활관/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^6\. 인실/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^7\. 생활관 거주 경험/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /기본 정보를 선택해주세요/ })).not.toBeInTheDocument();
+  });
+
   it('shows image tag questions one by one on their own section screens', async () => {
     const facilitySection = publishedSurveyFixture.sections[1];
     const survey = {
