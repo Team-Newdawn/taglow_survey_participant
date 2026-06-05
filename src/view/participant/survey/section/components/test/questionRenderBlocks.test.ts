@@ -108,6 +108,60 @@ describe('buildQuestionRenderBlocks', () => {
       { type: 'profile_field', id: 'question-profile-profile-dormExperience', question: profileQuestion, fieldKey: 'dormExperience' },
     ]);
   });
+
+  it('does not repeat default profile fields for duplicate composite profile questions', () => {
+    const duplicateProfileQuestion = {
+      ...profileQuestion,
+      id: 'question-profile-duplicate',
+      orderIndex: 1,
+    };
+
+    const blocks = buildQuestionRenderBlocks([profileQuestion, duplicateProfileQuestion]);
+
+    expect(blocks).toHaveLength(7);
+    expect(blocks).toEqual(
+      expect.arrayContaining([
+        { type: 'profile_field', id: 'question-profile-profile-gender', question: profileQuestion, fieldKey: 'gender' },
+        { type: 'profile_field', id: 'question-profile-profile-dormExperience', question: profileQuestion, fieldKey: 'dormExperience' },
+      ]),
+    );
+    expect(blocks).not.toEqual(
+      expect.arrayContaining([
+        {
+          type: 'profile_field',
+          id: 'question-profile-duplicate-profile-gender',
+          question: duplicateProfileQuestion,
+          fieldKey: 'gender',
+        },
+      ]),
+    );
+  });
+
+  it('only fills missing default profile fields after individual profile questions', () => {
+    const genderQuestion = {
+      ...profileQuestion,
+      id: 'question-gender',
+      questionKey: 'gender',
+      orderIndex: 0,
+    };
+    const bundledProfileQuestion = {
+      ...profileQuestion,
+      id: 'question-profile-rest',
+      orderIndex: 1,
+    };
+
+    const blocks = buildQuestionRenderBlocks([genderQuestion, bundledProfileQuestion]);
+
+    expect(blocks).toEqual([
+      { type: 'question', question: genderQuestion },
+      { type: 'profile_field', id: 'question-profile-rest-profile-semesterGroup', question: bundledProfileQuestion, fieldKey: 'semesterGroup' },
+      { type: 'profile_field', id: 'question-profile-rest-profile-department', question: bundledProfileQuestion, fieldKey: 'department' },
+      { type: 'profile_field', id: 'question-profile-rest-profile-rc', question: bundledProfileQuestion, fieldKey: 'rc' },
+      { type: 'profile_field', id: 'question-profile-rest-profile-dormitory', question: bundledProfileQuestion, fieldKey: 'dormitory' },
+      { type: 'profile_field', id: 'question-profile-rest-profile-roomType', question: bundledProfileQuestion, fieldKey: 'roomType' },
+      { type: 'profile_field', id: 'question-profile-rest-profile-dormExperience', question: bundledProfileQuestion, fieldKey: 'dormExperience' },
+    ]);
+  });
 });
 
 function buildScaleQuestion(id: string, orderIndex: number, displayGroup: string, displayGroupEn?: string): PublicQuestion {
