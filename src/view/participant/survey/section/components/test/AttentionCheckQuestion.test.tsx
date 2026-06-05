@@ -39,6 +39,48 @@ describe('AttentionCheckQuestion', () => {
     expect(onChange).toHaveBeenCalledWith(3);
   });
 
+  it('renders each configured score label under its scale button, localized by system language', () => {
+    const labelledQuestion: PublicQuestion = {
+      ...baseQuestion,
+      config: {
+        expectedValue: 3,
+        labelsKo: ['매우 불만족', '불만족', '보통', '만족', '매우 만족'],
+        labelsEn: ['Very poor', 'Poor', 'Neutral', 'Good', 'Very good'],
+      },
+    };
+
+    const { rerender } = render(
+      <AttentionCheckQuestion
+        question={labelledQuestion}
+        assets={[]}
+        locale="ko"
+        fallbackLocale="ko"
+        value={undefined}
+        onChange={vi.fn()}
+      />,
+    );
+
+    for (const label of ['매우 불만족', '불만족', '보통', '만족', '매우 만족']) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+
+    rerender(
+      <AttentionCheckQuestion
+        question={labelledQuestion}
+        assets={[]}
+        locale="en"
+        fallbackLocale="ko"
+        value={undefined}
+        onChange={vi.fn()}
+      />,
+    );
+
+    for (const label of ['Very poor', 'Poor', 'Neutral', 'Good', 'Very good']) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+    expect(screen.queryByText('보통')).not.toBeInTheDocument();
+  });
+
   it('keeps option-based attention checks as configured choices', async () => {
     const onChange = vi.fn();
 

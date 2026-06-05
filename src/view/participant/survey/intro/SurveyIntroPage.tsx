@@ -171,11 +171,7 @@ function readSurveyIntroDescription(survey: PublicSurvey, locale: Locale): strin
 }
 
 function readIntroLocalizedText(text: PublicSurvey['title'] | undefined, locale: Locale, fallback = ''): string {
-  if (locale === 'ko') {
-    return readLocalizedText(text, 'ko', 'ko').trim() || fallback;
-  }
-
-  return text?.en?.trim() || fallback;
+  return readLocalizedText(text, locale, 'ko').trim() || fallback;
 }
 
 function renderTextWithLinks(text: string): ReactNode[] {
