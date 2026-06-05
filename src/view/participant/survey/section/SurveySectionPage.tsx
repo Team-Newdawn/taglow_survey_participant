@@ -15,6 +15,7 @@ import { normalizeProfileRecord, type ProfileFieldKey } from '../../../../utils/
 import { DraftRestoreBanner } from '../components/DraftRestoreBanner';
 import { findAnswerSectionByKey, getAnswerSections } from '../surveySections';
 import { getSurveyLocaleCopy } from '../surveyLocaleCopy';
+import { buildDevAutofillValues } from './components/devAutofill';
 import { useDraftAutosave } from './components/useDraftAutosave';
 import { MultiSelectQuestionGroup } from './components/MultiSelectQuestionGroup';
 import { ProfileQuestion } from './components/ProfileQuestion';
@@ -78,6 +79,7 @@ export function SurveySectionPage() {
   });
   const currentScreenAssetUrlsQuery = useAssetUrlsQuery(currentScreenAssets);
   const copy = getSurveyLocaleCopy(displayLocale);
+  const canUseDevAutofill = import.meta.env.DEV;
   const visibleRenderBlocks = buildQuestionRenderBlocks(visibleQuestions);
   const currentRenderBlocks = buildQuestionRenderBlocks(currentQuestionScreen);
   const renderBlockNumberById = new Map(visibleRenderBlocks.map((block, index) => [getQuestionRenderBlockId(block), index + 1] as const));
@@ -122,6 +124,22 @@ export function SurveySectionPage() {
   const discardRestoreDraft = async () => {
     await removeDraft();
     setRestoreDraft(null);
+  };
+
+  const autofillCurrentScreen = () => {
+    const autofillValues = buildDevAutofillValues({
+      questions: currentQuestionScreen,
+      assets: survey.assets,
+      locale: displayLocale,
+      fallbackLocale: defaultLocale,
+      currentValues: form.getValues(),
+    });
+
+    Object.entries(autofillValues).forEach(([questionId, value]) => {
+      form.setValue(questionId, value, { shouldDirty: true, shouldTouch: true });
+    });
+
+    setMissingQuestionIds((questionIds) => questionIds.filter((questionId) => !(questionId in autofillValues)));
   };
 
   return (
@@ -231,6 +249,14 @@ export function SurveySectionPage() {
           })}
         </form>
       </div>
+
+      {canUseDevAutofill ? (
+        <div className="survey-section-page__dev-tools">
+          <Button type="button" variant="tertiary" onClick={autofillCurrentScreen}>
+            현재 화면 자동채움
+          </Button>
+        </div>
+      ) : null}
 
       <nav className="survey-section-page__bottom" aria-label={copy.sectionNavigation}>
         <Button type="button" variant="secondary" onClick={goPrevious}>

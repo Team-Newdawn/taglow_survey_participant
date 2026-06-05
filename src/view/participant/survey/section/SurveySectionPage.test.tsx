@@ -37,6 +37,23 @@ describe('SurveySectionPage', () => {
     expect(screen.getByRole('button', { name: '5' })).toHaveClass('is-selected');
   });
 
+  it('fills unanswered current-screen questions with development autofill values', async () => {
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/sections/facility',
+    });
+
+    expect(await screen.findByText('세탁실 만족도는 어떤가요?')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '현재 화면 자동채움' }));
+
+    await waitFor(() => {
+      expect(useParticipantDraftStore.getState().values['question-scale']).toEqual({ scoreValue: 5 });
+      expect(useParticipantDraftStore.getState().values['question-multi']).toEqual({
+        selectedOptions: ['cleanliness', 'quantity'],
+      });
+    });
+  });
+
   it('does not count the intro section in answer section progress', async () => {
     renderWithProviders(<AppRoutes />, {
       route: '/survey/fixture-survey/sections/facility',
