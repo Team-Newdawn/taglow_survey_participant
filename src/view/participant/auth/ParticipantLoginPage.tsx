@@ -32,7 +32,6 @@ export function ParticipantLoginPage() {
   const surveyQuery = usePublicSurveyLoginPageQuery(publicSlug);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const locale = resolveSurveyDefaultLocale(surveyQuery.data);
   const loginContent = useMemo(() => getLoginPageContent(surveyQuery.data, locale), [surveyQuery.data, locale]);
   const isInAppBrowser = useMemo(() => isLikelyInAppBrowser(window.navigator.userAgent), []);
@@ -60,15 +59,6 @@ export function ParticipantLoginPage() {
         ? []
         : fallbackParagraphs;
   const paragraphIds = paragraphs.map((_, index) => `participant-login-description-${index}`);
-
-  const copyCurrentLink = async () => {
-    try {
-      await window.navigator.clipboard.writeText(window.location.href);
-      setCopyState('copied');
-    } catch {
-      setCopyState('failed');
-    }
-  };
 
   const startGoogleSignIn = useCallback(async () => {
     setIsSigningIn(true);
@@ -136,25 +126,6 @@ export function ParticipantLoginPage() {
         ) : null}
 
         <img src={bottomImageSrc} alt={loginContent.bottomImage?.alt || 'Newdawn Domunion'} className="participant-login-page__partner-logo" />
-        {isInAppBrowser ? (
-          <Message
-            tone="warning"
-            title={usesAndroidBrowserHandoff ? '외부 브라우저에서 로그인을 이어갑니다.' : 'Google 로그인이 차단될 수 있습니다.'}
-            action={
-              <Button variant="secondary" onClick={copyCurrentLink} type="button">
-                링크 복사
-              </Button>
-            }
-          >
-            <p>
-              {usesAndroidBrowserHandoff
-                ? 'Google로 계속하기를 누르면 기본 브라우저에서 로그인 화면을 다시 엽니다.'
-                : '오류가 나면 이 링크를 Chrome 또는 Safari에서 다시 열어주세요.'}
-            </p>
-            {copyState === 'copied' ? <p>링크를 복사했습니다.</p> : null}
-            {copyState === 'failed' ? <p>주소창의 링크를 직접 복사해주세요.</p> : null}
-          </Message>
-        ) : null}
         <Button fullWidth disabled={isSigningIn || sessionQuery.isPending} onClick={signIn}>
           {isSigningIn ? '로그인 이동 중' : 'Google로 계속하기'}
         </Button>
