@@ -1,5 +1,6 @@
 import type {
   AnswerInput,
+  AnswerType,
   ImageTagPoint,
   ParticipantImageTagPoint,
   ParticipantImageTagUpload,
@@ -20,7 +21,7 @@ export function normalizeAnswerInput(question: PublicQuestion, value: unknown): 
 
   const base = {
     questionId: question.id,
-    answerType: question.questionType,
+    answerType: toPersistenceAnswerType(question.questionType),
     metricType: question.metricType,
     topicKey: question.topicKey,
     spaceKey: question.spaceKey,
@@ -338,6 +339,10 @@ function readGroupSelectionCount(questions: PublicQuestion[], keys: string[]): n
 
 function readRecord(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function toPersistenceAnswerType(questionType: PublicQuestion['questionType']): AnswerType {
+  return questionType === 'matrix_multi_select' ? 'multi_select' : questionType;
 }
 
 function readProfileAnswerRecord(question: PublicQuestion, value: unknown): Record<string, unknown> {
