@@ -82,10 +82,37 @@ describe('SupabaseParticipantApiGateway public survey', () => {
 });
 
 describe('SupabaseParticipantApiGateway submission', () => {
-  it('does not expose the transactional RPC before the production function is deployed', () => {
-    const gateway = new SupabaseParticipantApiGateway({} as unknown as SupabaseClient);
+  it('submits the full response through the transactional submit_survey_response RPC', async () => {
+    const rpc = vi.fn(async () => ({
+      data: { responseId: 'response-1', submittedAt: '2026-06-05T05:54:28.223Z', alreadySubmitted: false },
+      error: null,
+    }));
+    const gateway = new SupabaseParticipantApiGateway({ rpc } as unknown as SupabaseClient);
 
-    expect('submitSurveyResponse' in gateway).toBe(false);
+    const payload = {
+      response: { survey_id: 'survey-1' },
+      answers: [{ survey_id: 'survey-1', question_id: 'q-1', answer_type: 'scale', response_id: null }],
+      rawPayload: {},
+    };
+
+    await expect(gateway.submitSurveyResponse(payload)).resolves.toEqual({
+      responseId: 'response-1',
+      submittedAt: '2026-06-05T05:54:28.223Z',
+    });
+
+    expect(rpc).toHaveBeenCalledWith('submit_survey_response', { payload });
+  });
+
+  it('maps a duplicate submitted-response error from the RPC to ALREADY_SUBMITTED', async () => {
+    const rpc = vi.fn(async () => ({
+      data: null,
+      error: { code: '23505', message: 'A submitted response already exists for this survey.' },
+    }));
+    const gateway = new SupabaseParticipantApiGateway({ rpc } as unknown as SupabaseClient);
+
+    await expect(
+      gateway.submitSurveyResponse({ response: { survey_id: 'survey-1' }, answers: [], rawPayload: {} }),
+    ).rejects.toMatchObject({ code: 'ALREADY_SUBMITTED' });
   });
 
   it('does not ask Supabase to return inserted answer rows on the fallback path', async () => {
