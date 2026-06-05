@@ -72,6 +72,13 @@ export function createFakeParticipantApiController(overrides: FakeControllerOver
 
       return survey;
     },
+    async getPublicSurveyLoginPage() {
+      if (surveyError) {
+        throw surveyError;
+      }
+
+      return survey;
+    },
     async checkAccess(_command): Promise<SurveyAccessResult> {
       if (!session) {
         return { status: 'unauthenticated', survey };

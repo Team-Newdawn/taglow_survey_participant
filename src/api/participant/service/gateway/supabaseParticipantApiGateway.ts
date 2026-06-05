@@ -156,6 +156,32 @@ export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
     };
   }
 
+  async fetchPublicSurveyLoginPage(publicSlug: string): Promise<RawPublicSurveyBundle> {
+    const { data, error } = await this.supabase.rpc('get_public_survey_login_page', {
+      p_public_identifier: publicSlug,
+    });
+
+    if (error) {
+      if (isPublicLoginPageRpcMissing(error)) {
+        return this.fetchPublicSurveyBySlug(publicSlug);
+      }
+
+      throw toParticipantApiError(error, 'SURVEY_NOT_FOUND');
+    }
+
+    const result = data as Partial<RawPublicSurveyBundle> & { status?: string };
+    if (result.status === 'survey_not_found' || !result.survey) {
+      throw new ParticipantApiError('SURVEY_NOT_FOUND', 'Survey was not found.');
+    }
+
+    return {
+      survey: result.survey,
+      sections: Array.isArray(result.sections) ? result.sections : [],
+      questions: Array.isArray(result.questions) ? result.questions : [],
+      assets: Array.isArray(result.assets) ? result.assets : [],
+    };
+  }
+
   async fetchParticipantSurveyAccess(args: {
     publicSlug: string;
     participantDeviceId?: string;
@@ -421,5 +447,17 @@ function isRpcSignatureMismatch(error: unknown): boolean {
     (typeof record.message === 'string' &&
       record.message.includes('get_participant_survey_access') &&
       record.message.includes('p_device_id'))
+  );
+}
+
+function isPublicLoginPageRpcMissing(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const record = error as Record<string, unknown>;
+  return (
+    record.code === 'PGRST202' ||
+    (typeof record.message === 'string' && record.message.includes('get_public_survey_login_page'))
   );
 }

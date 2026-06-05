@@ -51,6 +51,13 @@ export class GatewayBackedParticipantApiController implements ParticipantApiCont
     return this.mapper.toPublicSurvey(bundle);
   }
 
+  async getPublicSurveyLoginPage(publicSlug: string): Promise<PublicSurvey> {
+    const bundle = this.gateway.fetchPublicSurveyLoginPage
+      ? await this.gateway.fetchPublicSurveyLoginPage(publicSlug)
+      : await this.gateway.fetchPublicSurveyBySlug(publicSlug);
+    return this.mapper.toPublicSurvey(bundle);
+  }
+
   async checkAccess(command: { publicSlug: string; participantDeviceId?: string }): Promise<SurveyAccessResult> {
     if (this.gateway.fetchParticipantSurveyAccess) {
       const raw = await this.gateway.fetchParticipantSurveyAccess(command);

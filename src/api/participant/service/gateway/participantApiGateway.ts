@@ -147,6 +147,7 @@ export interface ParticipantApiGateway {
   signInWithGoogle(redirectTo: string): Promise<void>;
   signOut(): Promise<void>;
   fetchPublicSurveyBySlug(publicSlug: string): Promise<RawPublicSurveyBundle>;
+  fetchPublicSurveyLoginPage?(publicSlug: string): Promise<RawPublicSurveyBundle>;
   fetchParticipantSurveyAccess?(args: {
     publicSlug: string;
     participantDeviceId?: string;
