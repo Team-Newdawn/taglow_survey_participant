@@ -109,6 +109,20 @@ describe('buildQuestionRenderBlocks', () => {
     ]);
   });
 
+  it('keeps a database profile question with its own field as a single block', () => {
+    const studentNumberQuestion: PublicQuestion = {
+      ...profileQuestion,
+      id: 'question-student-number',
+      questionKey: 'dorm_25_2_q185',
+      title: { ko: '학번 (예. 22400001)' },
+      config: { profileField: 'student_number', inputType: 'text', options: [] },
+    };
+
+    const blocks = buildQuestionRenderBlocks([studentNumberQuestion]);
+
+    expect(blocks).toEqual([{ type: 'question', question: studentNumberQuestion }]);
+  });
+
   it('does not repeat default profile fields for duplicate composite profile questions', () => {
     const duplicateProfileQuestion = {
       ...profileQuestion,

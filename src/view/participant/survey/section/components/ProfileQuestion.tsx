@@ -1,12 +1,18 @@
 import { Select } from '../../../../../components/Select';
 import type { Locale } from '../../../../../api/participant';
-import { normalizeProfileRecord, resolveProfileFieldKey, type ProfileFieldKey } from '../../../../../utils/profileFields';
+import { readLocalizedText } from '../../../../../utils/i18nText';
+import {
+  normalizeProfileRecord,
+  resolveProfileFieldId,
+  resolveProfileFieldKey,
+  type ProfileFieldKey,
+} from '../../../../../utils/profileFields';
 import { QuestionShell } from './QuestionShell';
 import type { QuestionComponentProps } from './questionComponentTypes';
 import { getDisplayOptions } from './questionOptions';
 import './css/ProfileQuestion.css';
 
-type ProfileValue = Partial<Record<ProfileFieldKey, string>>;
+type ProfileValue = Partial<Record<string, string>>;
 
 type ProfileFieldGroup = {
   key: ProfileFieldKey;
@@ -95,24 +101,81 @@ const fieldGroups: ProfileFieldGroup[] = [
 
 export function ProfileQuestion(props: ProfileQuestionProps) {
   const value = readProfileValue(props.value);
-  const resolvedProfileFieldKey = resolveProfileFieldKey(props.question);
-  const profileFieldKey = props.profileFieldKey ?? resolvedProfileFieldKey;
-  const fields = profileFieldKey ? fieldGroups.filter((field) => field.key === profileFieldKey) : [fieldGroups[0]];
-  const displayQuestion = profileFieldKey ? createProfileFieldQuestion(props.question, fields[0]) : props.question;
+  const ownFieldKey = resolveProfileFieldKey(props.question);
+  const overrideKey = props.profileFieldKey;
+  const canonicalKey = overrideKey ?? ownFieldKey;
   const configuredOptions = getDisplayOptions(props.question, props.locale, props.fallbackLocale);
+  // Configured options describe the question's own field; never apply them to a split
+  // override that targets a different field.
+  const configuredBelongToField = configuredOptions.length > 0 && (overrideKey === undefined || overrideKey === ownFieldKey);
 
-  return (
-    <QuestionShell question={displayQuestion} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
-      <div className="profile-question">
-        {fields.map((field) => (
+  const setField = (fieldId: string, nextValue: string) => props.onChange({ ...value, [fieldId]: nextValue });
+
+  // Known profile column: render the matching select. Prefer DB options/title, fall back
+  // to the canonical defaults (and to the field label when this is an override split).
+  if (canonicalKey) {
+    const field = fieldGroups.find((group) => group.key === canonicalKey) ?? fieldGroups[0];
+    const options = configuredBelongToField ? configuredOptions : localizeOptions(field.options, props.locale);
+    const label = overrideKey ? field.label[props.locale] : readLocalizedText(props.question.title, props.locale, props.fallbackLocale) || field.label[props.locale];
+    const displayQuestion = overrideKey ? createProfileFieldQuestion(props.question, field) : props.question;
+
+    return (
+      <QuestionShell question={displayQuestion} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
+        <div className="profile-question">
           <Select
-            key={field.key}
-            label={field.label[props.locale]}
-            options={resolvedProfileFieldKey === field.key && configuredOptions.length > 0 ? configuredOptions : localizeOptions(field.options, props.locale)}
-            value={value[field.key] ?? ''}
-            onChange={(event) => props.onChange({ ...value, [field.key]: event.target.value })}
+            label={label}
+            options={options}
+            value={value[canonicalKey] ?? ''}
+            onChange={(event) => setField(canonicalKey, event.target.value)}
           />
-        ))}
+        </div>
+      </QuestionShell>
+    );
+  }
+
+  // DB-defined field without a canonical column (e.g. student number, name). Render exactly
+  // as stored: configured options become a select, otherwise a free-text input.
+  const rawFieldId = resolveProfileFieldId(props.question);
+  if (rawFieldId || configuredOptions.length > 0) {
+    const storeKey = rawFieldId ?? props.question.id;
+    const label = readLocalizedText(props.question.title, props.locale, props.fallbackLocale);
+    const current = value[storeKey] ?? '';
+
+    return (
+      <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
+        <div className="profile-question">
+          {configuredOptions.length > 0 ? (
+            <Select
+              label={label}
+              options={configuredOptions}
+              value={current}
+              onChange={(event) => setField(storeKey, event.target.value)}
+            />
+          ) : (
+            <input
+              className="profile-question__text"
+              type="text"
+              aria-label={label || undefined}
+              value={current}
+              onChange={(event) => setField(storeKey, event.target.value)}
+            />
+          )}
+        </div>
+      </QuestionShell>
+    );
+  }
+
+  // Legacy composite question with no field identity: fall back to the first known field.
+  const fallbackField = fieldGroups[0];
+  return (
+    <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
+      <div className="profile-question">
+        <Select
+          label={fallbackField.label[props.locale]}
+          options={localizeOptions(fallbackField.options, props.locale)}
+          value={value[fallbackField.key] ?? ''}
+          onChange={(event) => setField(fallbackField.key, event.target.value)}
+        />
       </div>
     </QuestionShell>
   );

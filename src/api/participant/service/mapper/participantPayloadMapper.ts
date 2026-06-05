@@ -252,8 +252,63 @@ function normalizeQuestionOption(option: unknown): QuestionOption | null {
   return {
     value,
     label: normalizeLocalizedLabel(record, value),
-    metadata: parseRecord(record.metadata),
+    metadata: {
+      ...pickOptionMetadata(record),
+      ...parseRecord(record.metadata),
+    },
   };
+}
+
+function pickOptionMetadata(record: Record<string, unknown>): Record<string, unknown> {
+  const metadataKeys = [
+    'row',
+    'rowValue',
+    'row_value',
+    'rowKey',
+    'row_key',
+    'rowIndex',
+    'row_index',
+    'rowLabel',
+    'rowLabelKo',
+    'rowLabelEn',
+    'row_label',
+    'row_label_ko',
+    'row_label_en',
+    'column',
+    'columnValue',
+    'column_value',
+    'columnKey',
+    'column_key',
+    'columnIndex',
+    'column_index',
+    'columnLabel',
+    'columnLabelKo',
+    'columnLabelEn',
+    'column_label',
+    'column_label_ko',
+    'column_label_en',
+    'col',
+    'colValue',
+    'col_value',
+    'colKey',
+    'col_key',
+    'colIndex',
+    'col_index',
+    'colLabel',
+    'colLabelKo',
+    'colLabelEn',
+    'col_label',
+    'col_label_ko',
+    'col_label_en',
+  ];
+
+  return metadataKeys.reduce<Record<string, unknown>>((metadata, key) => {
+    if (record[key] !== undefined) {
+      metadata[key] = record[key];
+    }
+
+    return metadata;
+  }, {});
 }
 
 function normalizeLocalizedLabel(record: Record<string, unknown>, fallback: string): LocalizedText {
