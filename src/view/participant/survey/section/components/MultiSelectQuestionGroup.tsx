@@ -1,6 +1,7 @@
 import { useId } from 'react';
 
 import type { Locale, PublicQuestion } from '../../../../../api/participant';
+import { readLocalizedText } from '../../../../../utils/i18nText';
 import { getSurveyLocaleCopy, type SurveyLocaleCopy } from '../../surveyLocaleCopy';
 import { getDisplayOptions } from './questionOptions';
 import './css/MultiSelectQuestionGroup.css';
@@ -21,47 +22,53 @@ type MultiSelectValue = {
   otherText?: string;
 };
 
-type GroupOption = {
-  question: PublicQuestion;
+type MatrixColumn = {
   value: string;
   label: string;
 };
 
+type MatrixRow = {
+  question: PublicQuestion;
+  label: string;
+  options: MatrixColumn[];
+};
+
 export function MultiSelectQuestionGroup(props: MultiSelectQuestionGroupProps) {
   const titleId = useId();
-  const options = props.questions.flatMap((question) =>
-    getDisplayOptions(question, props.locale, props.fallbackLocale).map((option) => ({
-      question,
-      value: option.value,
-      label: option.label,
-    })),
-  );
-  const selectedCount = options.filter((option) => isOptionSelected(props.values, option)).length;
+  const rows = props.questions.map((question) => ({
+    question,
+    label: readMultiSelectRowLabel(question, props.locale, props.fallbackLocale),
+    options: getDisplayOptions(question, props.locale, props.fallbackLocale),
+  }));
+  const columns = buildMatrixColumns(rows);
+  const selectedCount = rows.reduce((count, row) => count + row.options.filter((option) => isOptionSelected(props.values, row.question, option.value)).length, 0);
   const isRequired = props.questions.some((question) => question.isRequired);
   const minSelections = readSelectionCount(props.questions, ['minSelections', 'minSelect']) ?? (isRequired ? 1 : 0);
   const maxSelections = readSelectionCount(props.questions, ['maxSelections', 'maxSelect']);
   const hasError = props.questions.some((question) => props.missingQuestionIds.includes(question.id));
-  const otherOption = options.find((option) => option.value === 'other' && isOptionSelected(props.values, option));
+  const otherOption = rows.flatMap((row) => row.options.map((option) => ({ question: row.question, value: option.value, label: option.label }))).find(
+    (option) => option.value === 'other' && isOptionSelected(props.values, option.question, option.value),
+  );
   const copy = getSurveyLocaleCopy(props.locale);
   const headingLabel = `${typeof props.number === 'number' ? `${props.number}. ` : ''}${props.groupTitle}${isRequired ? ` ${copy.required}` : ''}`;
 
-  const toggle = (option: GroupOption) => {
-    const value = readMultiSelectValue(props.values[option.question.id]);
+  const toggle = (question: PublicQuestion, optionValue: string) => {
+    const value = readMultiSelectValue(props.values[question.id]);
     const selectedOptions = value.selectedOptions ?? [];
-    const isSelected = selectedOptions.includes(option.value);
+    const isSelected = selectedOptions.includes(optionValue);
 
     if (!isSelected && typeof maxSelections === 'number' && selectedCount >= maxSelections) {
       return;
     }
 
     const nextSelectedOptions = isSelected
-      ? selectedOptions.filter((item) => item !== option.value)
-      : [...selectedOptions, option.value];
+      ? selectedOptions.filter((item) => item !== optionValue)
+      : [...selectedOptions, optionValue];
 
-    props.onChange(option.question.id, {
+    props.onChange(question.id, {
       ...value,
       selectedOptions: nextSelectedOptions,
-      ...(option.value === 'other' && isSelected ? { otherText: undefined } : {}),
+      ...(optionValue === 'other' && isSelected ? { otherText: undefined } : {}),
     });
   };
 
@@ -78,27 +85,62 @@ export function MultiSelectQuestionGroup(props: MultiSelectQuestionGroupProps) {
         <p>{buildSelectionGuide({ selectedCount, minSelections, maxSelections, copy })}</p>
       </div>
 
-      <div className="multi-select-question-group__chips">
-        {options.map((option) => {
-          const isSelected = isOptionSelected(props.values, option);
-          const isDisabled = !isSelected && typeof maxSelections === 'number' && selectedCount >= maxSelections;
+      <div className="multi-select-question-group__matrix-scroll">
+        <table className="multi-select-question-group__matrix">
+          <thead>
+            <tr>
+              <th scope="col" className="multi-select-question-group__row-heading">
+                <span className="multi-select-question-group__visually-hidden">{props.groupTitle}</span>
+              </th>
+              {columns.map((column) => (
+                <th key={column.value} scope="col">
+                  {column.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.question.id} className={props.missingQuestionIds.includes(row.question.id) ? 'has-error' : undefined}>
+                <th scope="row">
+                  {row.label}
+                  {row.question.isRequired ? <span aria-label={copy.required}> *</span> : null}
+                </th>
+                {columns.map((column) => {
+                  const option = row.options.find((item) => item.value === column.value);
 
-          return (
-            <label
-              key={`${option.question.id}-${option.value}`}
-              className={`multi-select-question-group__option${isSelected ? ' is-selected' : ''}${isDisabled ? ' is-disabled' : ''}`}
-            >
-              <input
-                type="checkbox"
-                value={option.value}
-                checked={isSelected}
-                disabled={isDisabled}
-                onChange={() => toggle(option)}
-              />
-              <span>{option.label}</span>
-            </label>
-          );
-        })}
+                  if (!option) {
+                    return (
+                      <td key={column.value} className="multi-select-question-group__empty-cell">
+                        <span aria-hidden="true">-</span>
+                      </td>
+                    );
+                  }
+
+                  const isSelected = isOptionSelected(props.values, row.question, option.value);
+                  const isDisabled = !isSelected && typeof maxSelections === 'number' && selectedCount >= maxSelections;
+
+                  return (
+                    <td key={option.value}>
+                      <label
+                        className={`multi-select-question-group__matrix-option${isSelected ? ' is-selected' : ''}${isDisabled ? ' is-disabled' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          value={option.value}
+                          checked={isSelected}
+                          disabled={isDisabled}
+                          aria-label={`${row.label}, ${option.label}`}
+                          onChange={() => toggle(row.question, option.value)}
+                        />
+                      </label>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {otherOption ? (
@@ -126,8 +168,22 @@ function readMultiSelectValue(value: unknown): MultiSelectValue {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as MultiSelectValue) : {};
 }
 
-function isOptionSelected(values: Record<string, unknown>, option: GroupOption): boolean {
-  return (readMultiSelectValue(values[option.question.id]).selectedOptions ?? []).includes(option.value);
+function isOptionSelected(values: Record<string, unknown>, question: PublicQuestion, optionValue: string): boolean {
+  return (readMultiSelectValue(values[question.id]).selectedOptions ?? []).includes(optionValue);
+}
+
+function buildMatrixColumns(rows: MatrixRow[]): MatrixColumn[] {
+  const columns = new Map<string, MatrixColumn>();
+
+  for (const row of rows) {
+    for (const option of row.options) {
+      if (!columns.has(option.value)) {
+        columns.set(option.value, option);
+      }
+    }
+  }
+
+  return [...columns.values()];
 }
 
 function readSelectionCount(questions: PublicQuestion[], keys: string[]): number | undefined {
@@ -143,6 +199,27 @@ function readSelectionCount(questions: PublicQuestion[], keys: string[]): number
   }
 
   return undefined;
+}
+
+function readMultiSelectRowLabel(question: PublicQuestion, locale: Locale, fallbackLocale: Locale): string {
+  const localeLabel = readConfigString(question.config, locale === 'en' ? 'rowLabelEn' : 'rowLabelKo');
+  const fallbackLabel = readConfigString(question.config, fallbackLocale === 'en' ? 'rowLabelEn' : 'rowLabelKo');
+  const displayLocaleLabel = readConfigString(question.config, locale === 'en' ? 'displayLabelEn' : 'displayLabelKo');
+  const displayFallbackLabel = readConfigString(question.config, fallbackLocale === 'en' ? 'displayLabelEn' : 'displayLabelKo');
+  const sharedLabel = readConfigString(question.config, 'rowLabel') ?? readConfigString(question.config, 'displayLabel');
+  const title = readLocalizedText(question.title, locale, fallbackLocale);
+
+  return localeLabel ?? fallbackLabel ?? displayLocaleLabel ?? displayFallbackLabel ?? sharedLabel ?? extractBracketItemLabel(title) ?? title;
+}
+
+function readConfigString(config: PublicQuestion['config'], key: string): string | undefined {
+  const value = config[key];
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function extractBracketItemLabel(title: string): string | undefined {
+  const match = title.match(/\[\s*(?:\(\d+\)\s*)?(.+?)\s*\]\s*$/);
+  return match?.[1]?.trim();
 }
 
 function buildSelectionGuide(args: { selectedCount: number; minSelections: number; maxSelections?: number; copy: SurveyLocaleCopy }): string {

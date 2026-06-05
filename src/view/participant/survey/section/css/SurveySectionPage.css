@@ -1,11 +1,11 @@
 .survey-section-page {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  height: 100vh;
-  height: 100dvh;
+  grid-template-rows: auto auto auto;
+  align-content: start;
+  min-height: 100vh;
+  min-height: 100dvh;
   max-width: var(--layout-content-max);
   margin: 0 auto;
-  overflow: hidden;
   padding: var(--space-6) var(--space-5) 0;
 }
 
@@ -19,8 +19,7 @@
 
 .survey-section-page__body {
   min-height: 0;
-  overflow-y: auto;
-  padding: var(--space-2) 0 calc(var(--layout-bottom-action-height) + var(--space-10));
+  padding: var(--space-2) 0 0;
   scrollbar-gutter: stable;
 }
 
@@ -31,6 +30,13 @@
 }
 
 .survey-section-page__bottom {
+  position: sticky;
+  right: auto;
+  bottom: 0;
+  left: auto;
   grid-template-columns: minmax(96px, 0.4fr) 1fr;
   gap: var(--space-3);
+  width: 100%;
+  margin: var(--space-5) 0 0;
+  padding: var(--space-4) 0 max(var(--space-4), env(safe-area-inset-bottom));
 }

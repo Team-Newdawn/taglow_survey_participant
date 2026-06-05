@@ -9,7 +9,7 @@ import type {
   RespondentProfile,
 } from '../api/participant';
 import { validateAttentionCheck } from '../api/participant/service/validation/attentionCheckValidator';
-import { normalizeProfileRecord, profileFieldKeys, resolveProfileFieldKey } from './profileFields';
+import { normalizeProfileRecord, profileFieldKeys, resolveProfileFieldId } from './profileFields';
 
 export type NormalizedAnswerInput = Omit<AnswerInput, 'surveyId' | 'sectionId'>;
 
@@ -51,7 +51,8 @@ export function normalizeAnswerInput(question: PublicQuestion, value: unknown): 
     }
     case 'single_choice':
       return [{ ...base, choiceValue: readString(value) }];
-    case 'multi_select': {
+    case 'multi_select':
+    case 'matrix_multi_select': {
       const record = readRecord(value);
       return [
         {
@@ -207,6 +208,7 @@ export function isAnsweredValue(question: PublicQuestion, value: unknown): boole
     case 'attention_check':
       return Boolean(readString(value)) || typeof readNumber(value) === 'number';
     case 'multi_select':
+    case 'matrix_multi_select':
       return readStringArray(readRecord(value).selectedOptions).length > 0;
     case 'ranking':
       return readRankingOptions(readRecord(value).rankedOptions).length > 0;
@@ -232,18 +234,18 @@ export function isAnsweredValue(question: PublicQuestion, value: unknown): boole
 export function findMissingRequiredQuestions(section: PublicSurveySection, values: Record<string, unknown>): PublicQuestion[] {
   const missingQuestions: PublicQuestion[] = [];
   const handledMultiSelectGroups = new Set<string>();
-  const handledProfileFields = new Set<(typeof profileFieldKeys)[number]>();
+  const handledProfileFields = new Set<string>();
 
   for (const question of section.questions) {
     if (question.questionType === 'profile') {
-      const profileFieldKey = resolveProfileFieldKey(question);
+      const profileFieldId = resolveProfileFieldId(question);
 
-      if (profileFieldKey) {
-        if (handledProfileFields.has(profileFieldKey)) {
+      if (profileFieldId) {
+        if (handledProfileFields.has(profileFieldId)) {
           continue;
         }
 
-        handledProfileFields.add(profileFieldKey);
+        handledProfileFields.add(profileFieldId);
 
         if (question.isRequired && !isAnsweredValue(question, values[question.id])) {
           missingQuestions.push(question);
@@ -340,8 +342,8 @@ function readRecord(value: unknown): Record<string, unknown> {
 
 function readProfileAnswerRecord(question: PublicQuestion, value: unknown): Record<string, unknown> {
   if (typeof value === 'string' || typeof value === 'number') {
-    const fieldKey = resolveProfileFieldKey(question);
-    return fieldKey ? { [fieldKey]: String(value) } : {};
+    const fieldId = resolveProfileFieldId(question);
+    return fieldId ? { [fieldId]: String(value) } : {};
   }
 
   return normalizeProfileRecord(readRecord(value));
@@ -349,10 +351,10 @@ function readProfileAnswerRecord(question: PublicQuestion, value: unknown): Reco
 
 function isProfileAnswerComplete(question: PublicQuestion, value: unknown): boolean {
   const profile = readProfileAnswerRecord(question, value);
-  const fieldKey = resolveProfileFieldKey(question);
+  const fieldId = resolveProfileFieldId(question);
 
-  if (fieldKey) {
-    return Boolean(readString(profile[fieldKey]));
+  if (fieldId) {
+    return Boolean(readString(profile[fieldId]));
   }
 
   return profileFieldKeys.every((key) => Boolean(readString(profile[key])));

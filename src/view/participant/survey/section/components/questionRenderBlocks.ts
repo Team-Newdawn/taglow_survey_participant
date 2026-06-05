@@ -1,5 +1,6 @@
 import type { PublicQuestion } from '../../../../../api/participant';
-import { profileFieldKeys, resolveProfileFieldKey, type ProfileFieldKey } from '../../../../../utils/profileFields';
+import { profileFieldKeys, resolveProfileFieldId, resolveProfileFieldKey, type ProfileFieldKey } from '../../../../../utils/profileFields';
+import { getQuestionOptions } from './questionOptions';
 
 export type QuestionRenderBlock =
   | Readonly<{
@@ -121,7 +122,13 @@ export function getQuestionRenderBlockId(block: QuestionRenderBlock): string {
 }
 
 function isCompositeProfileQuestion(question: PublicQuestion): boolean {
-  return question.questionType === 'profile' && !resolveProfileFieldKey(question);
+  if (question.questionType !== 'profile') {
+    return false;
+  }
+
+  // A question that identifies its own field (canonical or raw) or supplies its own
+  // options is a single DB-defined profile question, not a legacy composite to split.
+  return !resolveProfileFieldId(question) && getQuestionOptions(question).length === 0;
 }
 
 function readScaleDisplayGroup(question: PublicQuestion): string | undefined {

@@ -28,12 +28,19 @@ export const singleChoiceAnswerSchema = z.object({
   choiceValue: z.string().min(1),
 });
 
+const multiSelectValueJsonSchema = z.object({
+  selectedOptions: z.array(z.string()).min(1),
+  otherText: z.string().optional().nullable(),
+});
+
 export const multiSelectAnswerSchema = z.object({
   answerType: z.literal('multi_select'),
-  valueJson: z.object({
-    selectedOptions: z.array(z.string()).min(1),
-    otherText: z.string().optional().nullable(),
-  }),
+  valueJson: multiSelectValueJsonSchema,
+});
+
+export const matrixMultiSelectAnswerSchema = z.object({
+  answerType: z.literal('matrix_multi_select'),
+  valueJson: multiSelectValueJsonSchema,
 });
 
 export const rankingAnswerSchema = z.object({
@@ -94,6 +101,7 @@ export const answerInputSchema = z.discriminatedUnion('answerType', [
   scaleAnswerSchema,
   singleChoiceAnswerSchema,
   multiSelectAnswerSchema,
+  matrixMultiSelectAnswerSchema,
   rankingAnswerSchema,
   textAnswerSchema,
   imageTagAnswerSchema,

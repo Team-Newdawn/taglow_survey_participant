@@ -35,6 +35,7 @@ export function QuestionRenderer(props: QuestionRendererProps) {
     case 'single_choice':
       return <SingleChoiceQuestion {...props} />;
     case 'multi_select':
+    case 'matrix_multi_select':
       return <MultiSelectQuestion {...props} />;
     case 'ranking':
       return <RankingQuestion {...props} />;
