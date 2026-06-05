@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 
 import { useAssetUrlsQuery, useParticipantSessionQuery, usePublicSurveyQuery } from '../../../../api/participant';
 import { Button } from '../../../../components/Button';
@@ -15,20 +15,21 @@ import { normalizeProfileRecord, type ProfileFieldKey } from '../../../../utils/
 import { DraftRestoreBanner } from '../components/DraftRestoreBanner';
 import { findAnswerSectionByKey, getAnswerSections } from '../surveySections';
 import { getSurveyLocaleCopy } from '../surveyLocaleCopy';
-import { buildDevAutofillValues } from './components/devAutofill';
-import { useDraftAutosave } from './components/useDraftAutosave';
-import { MultiSelectQuestionGroup } from './components/MultiSelectQuestionGroup';
-import { ProfileQuestion } from './components/ProfileQuestion';
-import { useQuestionScreens } from './components/useQuestionScreens';
-import { QuestionRenderer } from './components/QuestionRenderer';
-import { ScaleQuestionGroup } from './components/ScaleQuestionGroup';
-import { buildQuestionRenderBlocks, getQuestionRenderBlockId } from './components/questionRenderBlocks';
+import { buildDevAutofillValues } from './components/utils/devAutofill';
+import { useDraftAutosave } from './components/hooks/useDraftAutosave';
+import { MultiSelectQuestionGroup } from './components/groups/MultiSelectQuestionGroup';
+import { ProfileQuestion } from './components/questions/ProfileQuestion';
+import { useQuestionScreens } from './components/hooks/useQuestionScreens';
+import { QuestionRenderer } from './components/layout/QuestionRenderer';
+import { ScaleQuestionGroup } from './components/groups/ScaleQuestionGroup';
+import { buildQuestionRenderBlocks, getQuestionRenderBlockId } from './components/utils/questionRenderBlocks';
 import { useSectionNavigation } from './navigation/useSectionNavigation';
-import { useSectionSurveyForm } from './components/useSectionSurveyForm';
+import { useSectionSurveyForm } from './components/hooks/useSectionSurveyForm';
 import './css/SurveySectionPage.css';
 
 export function SurveySectionPage() {
   const { publicSlug = '', sectionKey = '' } = useParams();
+  const location = useLocation();
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const surveyQuery = usePublicSurveyQuery(publicSlug);
   const sessionQuery = useParticipantSessionQuery();
@@ -68,7 +69,7 @@ export function SurveySectionPage() {
   useEffect(() => {
     setQuestionScreenIndex(0);
     setMissingQuestionIds([]);
-    scrollElementToTop(bodyRef.current);
+    return scrollSurveySectionToTop(bodyRef.current);
   }, [section?.id]);
 
   const { visibleQuestions, questionScreens, activeQuestionScreenIndex, currentQuestionScreen, currentScreenAssets } = useQuestionScreens({
@@ -82,6 +83,7 @@ export function SurveySectionPage() {
   const canUseDevAutofill = import.meta.env.DEV;
   const visibleRenderBlocks = buildQuestionRenderBlocks(visibleQuestions);
   const currentRenderBlocks = buildQuestionRenderBlocks(currentQuestionScreen);
+  const shouldOpenFirstQuestionPanel = readOpenFirstQuestionPanelState(location.state) && activeQuestionScreenIndex === 0;
   const renderBlockNumberById = new Map(visibleRenderBlocks.map((block, index) => [getQuestionRenderBlockId(block), index + 1] as const));
   const missingQuestions = section
     ? findMissingRequiredQuestions(section, form.getValues()).filter((question) =>
@@ -172,6 +174,8 @@ export function SurveySectionPage() {
         <form className="survey-section-page__questions">
           {currentRenderBlocks.map((block) => {
             if (block.type === 'scale_group') {
+              const isFirstRenderBlock = currentRenderBlocks[0] === block;
+
               return (
                 <ScaleQuestionGroup
                   key={block.id}
@@ -182,6 +186,7 @@ export function SurveySectionPage() {
                   values={Object.fromEntries(block.questions.map((question) => [question.id, form.watch(question.id)]))}
                   missingQuestionIds={missingQuestionIds}
                   number={renderBlockNumberById.get(block.id)}
+                  initialExpandedQuestionId={shouldOpenFirstQuestionPanel && isFirstRenderBlock ? block.questions[0]?.id : undefined}
                   onChange={(questionId, value) => {
                     form.setValue(questionId, value, { shouldDirty: true, shouldTouch: true });
                   }}
@@ -297,4 +302,39 @@ function scrollElementToTop(element: HTMLElement | null): void {
   }
 
   element.scrollTop = 0;
+}
+
+function scrollSurveySectionToTop(element: HTMLElement | null): (() => void) | undefined {
+  scrollElementToTop(element);
+  scrollViewportToTop();
+
+  if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+    return undefined;
+  }
+
+  const frameId = window.requestAnimationFrame(() => {
+    scrollElementToTop(element);
+    scrollViewportToTop();
+  });
+
+  return () => window.cancelAnimationFrame(frameId);
+}
+
+function scrollViewportToTop(): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  } catch {
+    // Some test/browser environments expose scrollTo without implementing it.
+  }
+
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+}
+
+function readOpenFirstQuestionPanelState(state: unknown): boolean {
+  return typeof state === 'object' && state !== null && (state as { openFirstQuestionPanel?: unknown }).openFirstQuestionPanel === true;
 }

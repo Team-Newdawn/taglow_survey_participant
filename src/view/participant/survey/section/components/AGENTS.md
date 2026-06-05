@@ -11,6 +11,16 @@ This directory contains components and hooks owned by `SurveySectionPage`.
 - Keep section-only hooks such as draft autosave, question screens, and section form setup here.
 - Repeated scale questions with the same `config.displayGroup` are grouped by the section page and rendered through `ScaleQuestionGroup` without changing their per-question draft or submit shape.
 
+## Organization
+
+- `questions/` contains individual question-type components.
+- `groups/` contains grouped question renderers owned by the section page.
+- `layout/` contains `QuestionRenderer`, `QuestionShell`, and shared section-question layout helpers.
+- `hooks/` contains section-only hooks.
+- `utils/` contains render/autofill/options helpers and shared component types.
+- `imageTag/` contains image and participant-image tagging components and image-tag-only helpers.
+- `test/` mirrors the component categories where practical.
+
 ## CSS Ownership
 
 - Each component with custom styles should keep a matching CSS file under `css/`.

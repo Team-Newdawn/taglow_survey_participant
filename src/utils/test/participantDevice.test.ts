@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildSubmittedSurveyMarkerKey, getOrCreateParticipantDeviceId, hasSurveySubmittedOnDevice, markSurveySubmittedOnDevice } from '../participantDevice';
+import {
+  buildSubmittedSurveyMarkerKey,
+  clearSurveySubmittedOnDevice,
+  getOrCreateParticipantDeviceId,
+  hasSurveySubmittedOnDevice,
+  markSurveySubmittedOnDevice,
+} from '../participantDevice';
 
 describe('participant device identity', () => {
   it('creates a device id once and reuses it from storage', () => {
@@ -21,16 +27,23 @@ describe('participant device identity', () => {
     expect(hasSurveySubmittedOnDevice('fixture-survey', storage)).toBe(true);
     expect(hasSurveySubmittedOnDevice('other-survey', storage)).toBe(false);
     expect(buildSubmittedSurveyMarkerKey('fixture-survey')).toBe('taglow-survey-submitted-device:v1:fixture-survey');
+
+    clearSurveySubmittedOnDevice('fixture-survey', storage);
+
+    expect(hasSurveySubmittedOnDevice('fixture-survey', storage)).toBe(false);
   });
 });
 
-function createStorage(): Pick<Storage, 'getItem' | 'setItem'> {
+function createStorage(): Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> {
   const values = new Map<string, string>();
 
   return {
     getItem: (key) => values.get(key) ?? null,
     setItem: (key, value) => {
       values.set(key, value);
+    },
+    removeItem: (key) => {
+      values.delete(key);
     },
   };
 }
