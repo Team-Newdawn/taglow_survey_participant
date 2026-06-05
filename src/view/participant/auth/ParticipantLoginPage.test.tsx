@@ -102,7 +102,7 @@ describe('ParticipantLoginPage', () => {
     expect(screen.getByText('응답 내용').tagName).toBe('STRONG');
   });
 
-  it('shows a browser handoff hint in Android KakaoTalk in-app browser', async () => {
+  it('does not show a browser handoff hint in Android KakaoTalk in-app browser', async () => {
     Object.defineProperty(window.navigator, 'userAgent', {
       configurable: true,
       value: 'Mozilla/5.0 (Linux; Android 14) KAKAOTALK',
@@ -112,9 +112,10 @@ describe('ParticipantLoginPage', () => {
       route: '/survey/fixture-survey/login',
     });
 
-    expect(await screen.findByText('외부 브라우저에서 로그인을 이어갑니다.')).toBeInTheDocument();
-    expect(screen.getByText('Google로 계속하기를 누르면 기본 브라우저에서 로그인 화면을 다시 엽니다.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '링크 복사' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Google로 계속하기' })).toBeInTheDocument();
+    expect(screen.queryByText('외부 브라우저에서 로그인을 이어갑니다.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Google로 계속하기를 누르면 기본 브라우저에서 로그인 화면을 다시 엽니다.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '링크 복사' })).not.toBeInTheDocument();
   });
 
   it('continues Google sign-in when the login page reopens after Android browser handoff', async () => {
