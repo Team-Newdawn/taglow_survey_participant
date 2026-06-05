@@ -1,5 +1,4 @@
 import type { Locale, LocalizedText, PublicSurvey, SurveyAsset } from '../../../api/participant';
-import { readLocalizedText } from '../../../utils/i18nText';
 
 export type LoginPageImage = Readonly<{
   url?: string;
@@ -261,7 +260,20 @@ function readLocalizedValue(value: unknown, locale: Locale): string | undefined 
     return undefined;
   }
 
-  return readLocalizedText(record as LocalizedText, locale) || undefined;
+  return readStrictLocalizedText(record as LocalizedText, locale) || undefined;
+}
+
+function readStrictLocalizedText(text: LocalizedText, locale: Locale): string {
+  const localized = text[locale];
+  if (typeof localized === 'string' && localized.trim()) {
+    return localized.trim();
+  }
+
+  if (locale === 'ko') {
+    return typeof text.en === 'string' ? text.en.trim() : '';
+  }
+
+  return '';
 }
 
 function parseRecord(value: unknown): Record<string, unknown> | undefined {

@@ -1,5 +1,5 @@
 import { screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createFakeParticipantApiController } from '../test/fakeParticipantApiController';
 import { publishedSurveyFixture } from '../test/fixtures/publicSurveyFixture';
@@ -8,8 +8,16 @@ import { markSurveySubmittedOnDevice } from '../utils/participantDevice';
 import { AppRoutes } from './router';
 
 describe('participant route guards', () => {
+  const originalLanguage = window.navigator.language;
+  const originalLanguages = window.navigator.languages;
+
   beforeEach(() => {
     window.localStorage.clear();
+    setNavigatorLanguages(['ko-KR']);
+  });
+
+  afterEach(() => {
+    setNavigatorLanguages(originalLanguages.length > 0 ? Array.from(originalLanguages) : [originalLanguage]);
   });
 
   it('does not redirect the root route to a demo survey', () => {
@@ -106,3 +114,14 @@ describe('participant route guards', () => {
     await waitFor(() => expect(screen.getByText('지금은 응답할 수 없는 설문입니다.')).toBeInTheDocument());
   });
 });
+
+function setNavigatorLanguages(languages: string[]) {
+  Object.defineProperty(window.navigator, 'language', {
+    configurable: true,
+    value: languages[0] ?? '',
+  });
+  Object.defineProperty(window.navigator, 'languages', {
+    configurable: true,
+    value: languages,
+  });
+}
