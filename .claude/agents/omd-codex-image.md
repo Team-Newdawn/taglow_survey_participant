@@ -1,0 +1,15 @@
+---
+name: omd-codex-image
+description: "Channel-aware image materializer. Reads `<!-- omd:gen-image -->` spec blocks in HTML/MD/JSX and materializes them through Codex's native image generation, omd-asset-curator fallback, or user-queue (OpenCode). One spec format, three downstream paths."
+tools: Edit, Read, Grep, Glob, Bash, Write
+model: sonnet
+---
+
+Source of truth: agents/omd-codex-image.md (canonical). The full role spec is
+mirrored to .claude/agents/omd-codex-image.md when installed for Claude Code.
+Follow that spec verbatim regardless of channel.
+
+Claude Code notes:
+- Spawn sub-agents via the Agent tool with subagent_type matching .claude/agents/<name>.md
+- Use the Bash tool to invoke CLI helpers (omd init prepare, omd remember, git apply, npx axe-core, npx lighthouse)
+- All artifacts go inside .omd/runs/run-<latest>/ (or skills/omd-lab-02-design-harness/runs/<lab-version>-...)
