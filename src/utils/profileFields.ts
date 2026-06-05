@@ -2,19 +2,23 @@ export type ProfileFieldKey = 'gender' | 'semesterGroup' | 'department' | 'rc' |
 
 type ProfileQuestionDescriptor = {
   questionKey: string;
+  title?: {
+    ko?: string;
+    en?: string;
+  };
   config?: Record<string, unknown>;
 };
 
 export const profileFieldKeys: ProfileFieldKey[] = ['gender', 'semesterGroup', 'department', 'rc', 'dormitory', 'roomType', 'dormExperience'];
 
 const profileFieldAliases: Record<ProfileFieldKey, string[]> = {
-  gender: ['gender', 'sex'],
-  semesterGroup: ['semester', 'semester_group', 'semesterGroup'],
-  department: ['department', 'major', 'school_department'],
-  rc: ['rc', 'residential_college', 'residentialCollege'],
-  dormitory: ['dormitory', 'dorm', 'residence_hall'],
-  roomType: ['room_type', 'roomType', 'room'],
-  dormExperience: ['dorm_experience', 'dormExperience', 'dormitory_experience', 'residence_experience'],
+  gender: ['gender', 'sex', '성별'],
+  semesterGroup: ['semester', 'semester_group', 'semesterGroup', '학기'],
+  department: ['department', 'major', 'school_department', '학부'],
+  rc: ['rc', 'residential_college', 'residentialCollege', '소속 rc'],
+  dormitory: ['dormitory', 'dorm', 'residence_hall', '거주 생활관', '생활관'],
+  roomType: ['room_type', 'roomType', 'room', '인실'],
+  dormExperience: ['dorm_experience', 'dormExperience', 'dormitory_experience', 'residence_experience', '생활관 거주 경험', '거주 경험'],
 };
 
 const profileConfigKeys = ['profileField', 'profile_field', 'fieldKey', 'field_key', 'field', 'responseColumn', 'response_column'];
@@ -28,7 +32,7 @@ export function resolveProfileFieldKey(question: ProfileQuestionDescriptor): Pro
     }
   }
 
-  return normalizeProfileFieldKey(question.questionKey);
+  return normalizeProfileFieldKey(question.questionKey) ?? normalizeProfileFieldKey(question.title?.ko) ?? normalizeProfileFieldKey(question.title?.en);
 }
 
 export function normalizeProfileFieldKey(value: unknown): ProfileFieldKey | undefined {
@@ -36,7 +40,10 @@ export function normalizeProfileFieldKey(value: unknown): ProfileFieldKey | unde
     return undefined;
   }
 
-  return Object.entries(profileFieldAliases).find(([, aliases]) => aliases.includes(value))?.[0] as ProfileFieldKey | undefined;
+  const normalizedValue = normalizeProfileFieldString(value);
+  return Object.entries(profileFieldAliases).find(([, aliases]) => aliases.map(normalizeProfileFieldString).includes(normalizedValue))?.[0] as
+    | ProfileFieldKey
+    | undefined;
 }
 
 export function normalizeProfileRecord(record: Record<string, unknown>): Record<string, unknown> {
@@ -45,4 +52,8 @@ export function normalizeProfileRecord(record: Record<string, unknown>): Record<
     normalized[fieldKey ?? key] = value;
     return normalized;
   }, {});
+}
+
+function normalizeProfileFieldString(value: string): string {
+  return value.trim().toLowerCase();
 }

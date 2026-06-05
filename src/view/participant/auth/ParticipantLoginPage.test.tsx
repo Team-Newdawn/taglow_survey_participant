@@ -17,15 +17,27 @@ import {
 
 describe('ParticipantLoginPage', () => {
   const originalUserAgent = window.navigator.userAgent;
+  const originalLanguage = window.navigator.language;
+  const originalLanguages = window.navigator.languages;
 
   afterEach(() => {
     Object.defineProperty(window.navigator, 'userAgent', {
       configurable: true,
       value: originalUserAgent,
     });
+    Object.defineProperty(window.navigator, 'language', {
+      configurable: true,
+      value: originalLanguage,
+    });
+    Object.defineProperty(window.navigator, 'languages', {
+      configurable: true,
+      value: originalLanguages,
+    });
   });
 
-  it('shows Taglow branding without survey-specific copy', async () => {
+  it('shows Korean login copy when the system language is Korean', async () => {
+    setNavigatorLanguages(['ko-KR', 'en-US']);
+
     renderWithProviders(<AppRoutes />, {
       route: '/survey/fixture-survey/login',
     });
@@ -46,7 +58,46 @@ describe('ParticipantLoginPage', () => {
     expect(screen.queryByText(/설문에 참여/)).not.toBeInTheDocument();
   });
 
+  it('shows English login copy when the system language is not Korean', async () => {
+    setNavigatorLanguages(['en-US']);
+
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/login',
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Collecting every voice more clearly.' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
+    expect(screen.getByText('Taglow helps teams collect feedback clearly and find the changes that matter.')).toBeInTheDocument();
+    expect(screen.queryByText('목소리를 더 선명하게 모읍니다.')).not.toBeInTheDocument();
+  });
+
+  it('does not fall back to Korean configured login text for non-Korean system languages', async () => {
+    setNavigatorLanguages(['ja-JP']);
+
+    const survey = {
+      ...publishedSurveyFixture,
+      settings: {
+        ...publishedSurveyFixture.settings,
+        participantLogin: {
+          headline: { ko: '한국어 전용 로그인 제목' },
+          bodyParagraphs: [{ ko: '한국어 전용 로그인 설명' }],
+        },
+      },
+    } satisfies PublicSurvey;
+
+    renderWithProviders(<AppRoutes />, {
+      route: '/survey/fixture-survey/login',
+      controller: createFakeParticipantApiController({ survey }),
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Collecting every voice more clearly.' })).toBeInTheDocument();
+    expect(screen.queryByText('한국어 전용 로그인 제목')).not.toBeInTheDocument();
+    expect(screen.queryByText('한국어 전용 로그인 설명')).not.toBeInTheDocument();
+  });
+
   it('renders participantLogin images and bold markdown from survey settings', async () => {
+    setNavigatorLanguages(['ko-KR']);
+
     const survey = {
       ...publishedSurveyFixture,
       settings: {
@@ -103,6 +154,8 @@ describe('ParticipantLoginPage', () => {
   });
 
   it('does not show a browser handoff hint in Android KakaoTalk in-app browser', async () => {
+    setNavigatorLanguages(['ko-KR']);
+
     Object.defineProperty(window.navigator, 'userAgent', {
       configurable: true,
       value: 'Mozilla/5.0 (Linux; Android 14) KAKAOTALK',
@@ -119,6 +172,8 @@ describe('ParticipantLoginPage', () => {
   });
 
   it('continues Google sign-in when the login page reopens after Android browser handoff', async () => {
+    setNavigatorLanguages(['ko-KR']);
+
     Object.defineProperty(window.navigator, 'userAgent', {
       configurable: true,
       value: 'Mozilla/5.0 (Linux; Android 14) Chrome/125.0.0.0 Mobile Safari/537.36',
@@ -142,6 +197,8 @@ describe('ParticipantLoginPage', () => {
   });
 
   it('clears an existing participant session before starting Google sign-in', async () => {
+    setNavigatorLanguages(['ko-KR']);
+
     const user = userEvent.setup();
     const signOut = vi.fn(async () => undefined);
     const signInWithGoogle = vi.fn(async () => undefined);
@@ -169,6 +226,17 @@ describe('ParticipantLoginPage', () => {
     });
   });
 });
+
+function setNavigatorLanguages(languages: string[]) {
+  Object.defineProperty(window.navigator, 'language', {
+    configurable: true,
+    value: languages[0] ?? '',
+  });
+  Object.defineProperty(window.navigator, 'languages', {
+    configurable: true,
+    value: languages,
+  });
+}
 
 describe('browserHandoff', () => {
   it('uses Android browser handoff only for Android in-app browsers', () => {

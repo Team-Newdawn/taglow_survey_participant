@@ -146,6 +146,38 @@ describe('buildSubmissionAnswers', () => {
     );
   });
 
+  it('aggregates profile answers when the field is inferred from the database title', () => {
+    const profileSurvey = {
+      ...publishedSurveyFixture,
+      sections: [
+        {
+          ...publishedSurveyFixture.sections[0],
+          questions: [
+            {
+              ...publishedSurveyFixture.sections[0].questions[0],
+              id: 'question-semester-title',
+              questionKey: 'profile',
+              title: { ko: '학기' },
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(extractRespondentProfile(profileSurvey, { 'question-semester-title': '3_4' })).toEqual(
+      expect.objectContaining({
+        semesterGroup: '3_4',
+      }),
+    );
+    expect(buildSubmissionAnswers(profileSurvey, { 'question-semester-title': '3_4' })).toEqual([
+      expect.objectContaining({
+        questionId: 'question-semester-title',
+        answerType: 'profile',
+        valueJson: { semesterGroup: '3_4' },
+      }),
+    ]);
+  });
+
   it('normalizes participant uploaded image tags into point answers with upload metadata', () => {
     const participantImageSurvey = {
       ...publishedSurveyFixture,

@@ -95,7 +95,8 @@ const fieldGroups: ProfileFieldGroup[] = [
 
 export function ProfileQuestion(props: ProfileQuestionProps) {
   const value = readProfileValue(props.value);
-  const profileFieldKey = props.profileFieldKey ?? resolveProfileFieldKey(props.question);
+  const resolvedProfileFieldKey = resolveProfileFieldKey(props.question);
+  const profileFieldKey = props.profileFieldKey ?? resolvedProfileFieldKey;
   const fields = profileFieldKey ? fieldGroups.filter((field) => field.key === profileFieldKey) : [fieldGroups[0]];
   const displayQuestion = profileFieldKey ? createProfileFieldQuestion(props.question, fields[0]) : props.question;
   const configuredOptions = getDisplayOptions(props.question, props.locale, props.fallbackLocale);
@@ -107,7 +108,7 @@ export function ProfileQuestion(props: ProfileQuestionProps) {
           <Select
             key={field.key}
             label={field.label[props.locale]}
-            options={profileFieldKey && configuredOptions.length > 0 ? configuredOptions : localizeOptions(field.options, props.locale)}
+            options={resolvedProfileFieldKey === field.key && configuredOptions.length > 0 ? configuredOptions : localizeOptions(field.options, props.locale)}
             value={value[field.key] ?? ''}
             onChange={(event) => props.onChange({ ...value, [field.key]: event.target.value })}
           />
