@@ -17,6 +17,8 @@ import type {
   RawSession,
   RawServiceFeedbackPayload,
   RawServiceFeedbackResult,
+  RawSubmitSurveyPayload,
+  RawSubmitSurveyResult,
   RawSurveyRow,
 } from './participantApiGateway';
 
@@ -82,6 +84,7 @@ export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
       .select(`
         id,
         title,
+        title_en,
         description,
         description_en,
         status,
@@ -277,6 +280,21 @@ export class SupabaseParticipantApiGateway implements ParticipantApiGateway {
     }
 
     return [];
+  }
+
+  async submitSurveyResponse(payload: RawSubmitSurveyPayload): Promise<RawSubmitSurveyResult> {
+    const { data, error } = await this.supabase.rpc('submit_survey_response', { payload });
+
+    if (error) {
+      throw toParticipantApiError(error, 'SUBMISSION_FAILED');
+    }
+
+    const result = (data ?? {}) as { responseId?: unknown; submittedAt?: unknown };
+
+    return {
+      responseId: typeof result.responseId === 'string' ? result.responseId : '',
+      submittedAt: typeof result.submittedAt === 'string' ? result.submittedAt : undefined,
+    };
   }
 
   async createSignedAssetUrl(args: { bucket: string; path: string }): Promise<string> {
