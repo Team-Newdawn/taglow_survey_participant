@@ -251,6 +251,38 @@ describe('buildSubmissionAnswers', () => {
     ).toEqual([]);
   });
 
+  it('requires every default profile field for a bundled required profile question', () => {
+    const section = publishedSurveyFixture.sections[0];
+    const profileQuestion = section.questions[0];
+
+    expect(
+      findMissingRequiredQuestions(section, {
+        [profileQuestion.id]: {
+          gender: 'female',
+          semesterGroup: '3_4',
+          department: 'computer_science',
+          rc: 'torrey',
+          dormitory: 'dorm_1',
+          roomType: '2_person',
+        },
+      }),
+    ).toEqual([profileQuestion]);
+
+    expect(
+      findMissingRequiredQuestions(section, {
+        [profileQuestion.id]: {
+          gender: 'female',
+          semesterGroup: '3_4',
+          department: 'computer_science',
+          rc: 'torrey',
+          dormitory: 'dorm_1',
+          roomType: '2_person',
+          dormExperience: 'first_semester',
+        },
+      }),
+    ).toEqual([]);
+  });
+
   it('requires an opinion type only for selection-before-text questions', () => {
     const section = {
       ...publishedSurveyFixture.sections[1],

@@ -40,16 +40,26 @@ describe('ProfileQuestion', () => {
     expect(onChange).toHaveBeenCalledWith({ semesterGroup: '3_4' });
   });
 
-  it('keeps the composite profile question fallback for bundled profile forms', () => {
+  it('renders only the first profile field when no field key is available', () => {
     renderProfileQuestion();
 
     expect(screen.getByLabelText('성별')).toBeInTheDocument();
-    expect(screen.getByLabelText('학기')).toBeInTheDocument();
-    expect(screen.getByLabelText('생활관 거주 경험')).toBeInTheDocument();
+    expect(screen.queryByLabelText('학기')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('생활관 거주 경험')).not.toBeInTheDocument();
+  });
+
+  it('renders the overridden profile field as its own question shell', () => {
+    renderProfileQuestion({ profileFieldKey: 'roomType' });
+
+    expect(screen.getByRole('heading', { name: /인실/ })).toBeInTheDocument();
+    expect(screen.getByLabelText('인실')).toBeInTheDocument();
+    expect(screen.queryByLabelText('성별')).not.toBeInTheDocument();
   });
 });
 
-function renderProfileQuestion(options: { question?: PublicQuestion; value?: unknown; onChange?: (value: unknown) => void } = {}) {
+function renderProfileQuestion(
+  options: { question?: PublicQuestion; value?: unknown; onChange?: (value: unknown) => void; profileFieldKey?: Parameters<typeof ProfileQuestion>[0]['profileFieldKey'] } = {},
+) {
   return render(
     <ProfileQuestion
       question={options.question ?? baseProfileQuestion}
@@ -58,6 +68,7 @@ function renderProfileQuestion(options: { question?: PublicQuestion; value?: unk
       fallbackLocale="ko"
       value={options.value ?? {}}
       onChange={options.onChange ?? vi.fn()}
+      profileFieldKey={options.profileFieldKey}
     />,
   );
 }

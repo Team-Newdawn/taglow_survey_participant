@@ -5,6 +5,8 @@ type ProfileQuestionDescriptor = {
   config?: Record<string, unknown>;
 };
 
+export const profileFieldKeys: ProfileFieldKey[] = ['gender', 'semesterGroup', 'department', 'rc', 'dormitory', 'roomType', 'dormExperience'];
+
 const profileFieldAliases: Record<ProfileFieldKey, string[]> = {
   gender: ['gender', 'sex'],
   semesterGroup: ['semester', 'semester_group', 'semesterGroup'],

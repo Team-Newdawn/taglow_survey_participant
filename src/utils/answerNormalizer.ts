@@ -9,7 +9,7 @@ import type {
   RespondentProfile,
 } from '../api/participant';
 import { validateAttentionCheck } from '../api/participant/service/validation/attentionCheckValidator';
-import { normalizeProfileRecord, resolveProfileFieldKey } from './profileFields';
+import { normalizeProfileRecord, profileFieldKeys, resolveProfileFieldKey } from './profileFields';
 
 export type NormalizedAnswerInput = Omit<AnswerInput, 'surveyId' | 'sectionId'>;
 
@@ -198,7 +198,7 @@ export function extractRespondentProfile(survey: PublicSurvey, values: Record<st
 export function isAnsweredValue(question: PublicQuestion, value: unknown): boolean {
   switch (question.questionType) {
     case 'profile':
-      return Object.values(readProfileAnswerRecord(question, value)).some((item) => readString(item));
+      return isProfileAnswerComplete(question, value);
     case 'experience':
       return Boolean(readString(readRecord(value).experienceStatus));
     case 'scale':
@@ -308,6 +308,17 @@ function readProfileAnswerRecord(question: PublicQuestion, value: unknown): Reco
   }
 
   return normalizeProfileRecord(readRecord(value));
+}
+
+function isProfileAnswerComplete(question: PublicQuestion, value: unknown): boolean {
+  const profile = readProfileAnswerRecord(question, value);
+  const fieldKey = resolveProfileFieldKey(question);
+
+  if (fieldKey) {
+    return Boolean(readString(profile[fieldKey]));
+  }
+
+  return profileFieldKeys.every((key) => Boolean(readString(profile[key])));
 }
 
 function readString(value: unknown): string | undefined {
