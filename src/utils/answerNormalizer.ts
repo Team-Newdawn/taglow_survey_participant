@@ -232,8 +232,36 @@ export function isAnsweredValue(question: PublicQuestion, value: unknown): boole
 export function findMissingRequiredQuestions(section: PublicSurveySection, values: Record<string, unknown>): PublicQuestion[] {
   const missingQuestions: PublicQuestion[] = [];
   const handledMultiSelectGroups = new Set<string>();
+  const handledProfileFields = new Set<(typeof profileFieldKeys)[number]>();
 
   for (const question of section.questions) {
+    if (question.questionType === 'profile') {
+      const profileFieldKey = resolveProfileFieldKey(question);
+
+      if (profileFieldKey) {
+        if (handledProfileFields.has(profileFieldKey)) {
+          continue;
+        }
+
+        handledProfileFields.add(profileFieldKey);
+
+        if (question.isRequired && !isAnsweredValue(question, values[question.id])) {
+          missingQuestions.push(question);
+        }
+
+        continue;
+      }
+
+      const unhandledProfileFields = profileFieldKeys.filter((fieldKey) => !handledProfileFields.has(fieldKey));
+      unhandledProfileFields.forEach((fieldKey) => handledProfileFields.add(fieldKey));
+
+      if (question.isRequired && unhandledProfileFields.length > 0 && isCompositeProfileAnswerMissing(question, values[question.id], unhandledProfileFields)) {
+        missingQuestions.push(question);
+      }
+
+      continue;
+    }
+
     const multiSelectGroup = readMultiSelectDisplayGroup(question);
 
     if (multiSelectGroup) {
@@ -257,6 +285,15 @@ export function findMissingRequiredQuestions(section: PublicSurveySection, value
   }
 
   return missingQuestions;
+}
+
+function isCompositeProfileAnswerMissing(
+  question: PublicQuestion,
+  value: unknown,
+  profileFields: Array<(typeof profileFieldKeys)[number]>,
+): boolean {
+  const profile = readProfileAnswerRecord(question, value);
+  return profileFields.some((fieldKey) => !readString(profile[fieldKey]));
 }
 
 function isRequiredMultiSelectGroupMissing(questions: PublicQuestion[], values: Record<string, unknown>): boolean {
