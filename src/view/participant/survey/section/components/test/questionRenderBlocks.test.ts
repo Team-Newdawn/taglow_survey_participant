@@ -162,6 +162,28 @@ describe('buildQuestionRenderBlocks', () => {
       { type: 'profile_field', id: 'question-profile-rest-profile-dormExperience', question: bundledProfileQuestion, fieldKey: 'dormExperience' },
     ]);
   });
+
+  it('treats titled profile rows as individual database-configured fields', () => {
+    const genderQuestion = {
+      ...profileQuestion,
+      id: 'question-gender',
+      questionKey: 'profile',
+      title: { ko: '성별' },
+      orderIndex: 0,
+    };
+    const semesterQuestion = {
+      ...profileQuestion,
+      id: 'question-semester',
+      questionKey: 'profile',
+      title: { ko: '학기' },
+      orderIndex: 1,
+    };
+
+    expect(buildQuestionRenderBlocks([genderQuestion, semesterQuestion])).toEqual([
+      { type: 'question', question: genderQuestion },
+      { type: 'question', question: semesterQuestion },
+    ]);
+  });
 });
 
 function buildScaleQuestion(id: string, orderIndex: number, displayGroup: string, displayGroupEn?: string): PublicQuestion {

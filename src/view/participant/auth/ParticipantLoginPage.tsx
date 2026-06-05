@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 
 import {
+  type Locale,
   useAssetUrlsQuery,
   useParticipantApiController,
   useParticipantSessionQuery,
@@ -12,7 +13,6 @@ import newdawnDomunionLogoUrl from '../../../assets/logo_newdawn_domunion.png';
 import taglowLogoUrl from '../../../assets/taglow_logo.png';
 import { Button } from '../../../components/Button';
 import { Message } from '../../../components/Message';
-import { resolveSurveyDefaultLocale } from '../../../utils/i18nText';
 import {
   buildAndroidBrowserIntentUrl,
   createGoogleOAuthHandoffUrl,
@@ -32,7 +32,7 @@ export function ParticipantLoginPage() {
   const surveyQuery = usePublicSurveyLoginPageQuery(publicSlug);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const locale = resolveSurveyDefaultLocale(surveyQuery.data);
+  const locale = useMemo(() => resolveSystemLoginLocale(window.navigator), []);
   const loginContent = useMemo(() => getLoginPageContent(surveyQuery.data, locale), [surveyQuery.data, locale]);
   const isInAppBrowser = useMemo(() => isLikelyInAppBrowser(window.navigator.userAgent), []);
   const usesAndroidBrowserHandoff = useMemo(() => shouldUseAndroidBrowserHandoff(window.navigator.userAgent), []);
@@ -46,12 +46,18 @@ export function ParticipantLoginPage() {
   const topImageSrc = loginContent.topImage?.url ?? readAssetUrl(assetUrlsQuery.data, loginContent.topImage?.asset?.id) ?? taglowLogoUrl;
   const bottomImageSrc =
     loginContent.bottomImage?.url ?? readAssetUrl(assetUrlsQuery.data, loginContent.bottomImage?.asset?.id) ?? newdawnDomunionLogoUrl;
-  const fallbackTitle = '목소리를 더 선명하게 모읍니다.';
+  const fallbackTitle = locale === 'ko' ? '목소리를 더 선명하게 모읍니다.' : 'Collecting every voice more clearly.';
   const title = loginContent.title ?? (surveyQuery.isPending ? '' : fallbackTitle);
-  const fallbackParagraphs = [
-    'Taglow는 현장의 의견을 기록하고 필요한 변화를 찾도록 돕는 피드백 플랫폼입니다.',
-    '이번 설문은 **한동대학교 자치회**와 **뉴던**의 협업으로 진행됩니다. 설문 내용은 **자치회**에서 제공하였고, 플랫폼은 **뉴던**에서 제공합니다.',
-  ];
+  const fallbackParagraphs =
+    locale === 'ko'
+      ? [
+          'Taglow는 현장의 의견을 기록하고 필요한 변화를 찾도록 돕는 피드백 플랫폼입니다.',
+          '이번 설문은 **한동대학교 자치회**와 **뉴던**의 협업으로 진행됩니다. 설문 내용은 **자치회**에서 제공하였고, 플랫폼은 **뉴던**에서 제공합니다.',
+        ]
+      : [
+          'Taglow helps teams collect feedback clearly and find the changes that matter.',
+          'This survey is run in collaboration with the **Handong Student Council** and **Newdawn**. The survey content is provided by the **Student Council**, and the platform is provided by **Newdawn**.',
+        ];
   const paragraphs =
     loginContent.paragraphs.length > 0
       ? loginContent.paragraphs
@@ -72,10 +78,10 @@ export function ParticipantLoginPage() {
 
       await controller.signInWithGoogle({ redirectTo });
     } catch {
-      setError('로그인을 시작하지 못했습니다. 잠시 후 다시 시도해주세요.');
+      setError(locale === 'ko' ? '로그인을 시작하지 못했습니다. 잠시 후 다시 시도해주세요.' : 'Could not start sign-in. Please try again shortly.');
       setIsSigningIn(false);
     }
-  }, [controller, publicSlug, sessionQuery.data]);
+  }, [controller, locale, publicSlug, sessionQuery.data]);
 
   useEffect(() => {
     if (!shouldAutoStartGoogleOAuth || isInAppBrowser || sessionQuery.isPending || isSigningIn) {
@@ -120,18 +126,23 @@ export function ParticipantLoginPage() {
 
       <footer className="participant-login-page__bottom">
         {error ? (
-          <Message tone="error" title="로그인이 필요합니다.">
+          <Message tone="error" title={locale === 'ko' ? '로그인이 필요합니다.' : 'Sign-in is required.'}>
             <p>{error}</p>
           </Message>
         ) : null}
 
         <img src={bottomImageSrc} alt={loginContent.bottomImage?.alt || 'Newdawn Domunion'} className="participant-login-page__partner-logo" />
         <Button fullWidth disabled={isSigningIn || sessionQuery.isPending} onClick={signIn}>
-          {isSigningIn ? '로그인 이동 중' : 'Google로 계속하기'}
+          {isSigningIn ? (locale === 'ko' ? '로그인 이동 중' : 'Opening sign-in') : locale === 'ko' ? 'Google로 계속하기' : 'Continue with Google'}
         </Button>
       </footer>
     </main>
   );
+}
+
+function resolveSystemLoginLocale(navigator: Navigator): Locale {
+  const languages = navigator.languages?.length ? navigator.languages : [navigator.language];
+  return languages[0]?.toLowerCase().startsWith('ko') ? 'ko' : 'en';
 }
 
 function readAssetUrl(assetUrls: Record<string, string> | undefined, assetId: string | undefined): string | undefined {

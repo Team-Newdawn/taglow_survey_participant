@@ -55,6 +55,47 @@ describe('ProfileQuestion', () => {
     expect(screen.getByLabelText('인실')).toBeInTheDocument();
     expect(screen.queryByLabelText('성별')).not.toBeInTheDocument();
   });
+
+  it('uses configured database options when the profile field is inferred from the title', () => {
+    renderProfileQuestion({
+      question: {
+        ...baseQuestion,
+        questionKey: 'profile',
+        title: { ko: '학기', en: 'Semester' },
+        config: {
+          options: [
+            { value: 'freshman', label: { ko: '1학년' } },
+            { value: 'sophomore', label: { ko: '2학년' } },
+          ],
+        },
+      },
+    });
+
+    expect(screen.getByLabelText('학기')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '1학년' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: '남성' })).not.toBeInTheDocument();
+  });
+
+  it('does not reuse composite profile options for an overridden split field', () => {
+    renderProfileQuestion({
+      question: {
+        ...baseQuestion,
+        questionKey: 'profile',
+        title: { ko: '기본 정보를 선택해주세요.' },
+        config: {
+          options: [
+            { value: 'male', label: { ko: '남성' } },
+            { value: 'female', label: { ko: '여성' } },
+          ],
+        },
+      },
+      profileFieldKey: 'semesterGroup',
+    });
+
+    expect(screen.getByLabelText('학기')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '1~2학기' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: '남성' })).not.toBeInTheDocument();
+  });
 });
 
 function renderProfileQuestion(
