@@ -79,8 +79,8 @@ describe('ParticipantLoginPage', () => {
       settings: {
         ...publishedSurveyFixture.settings,
         participantLogin: {
-          headline: { ko: '한국어 전용 로그인 제목' },
-          bodyParagraphs: [{ ko: '한국어 전용 로그인 설명' }],
+          headline: '한국어 전용 로그인 제목',
+          bodyParagraphs: ['한국어 전용 로그인 설명'],
         },
       },
     } satisfies PublicSurvey;

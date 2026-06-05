@@ -252,7 +252,8 @@ function readImageAlt(value: unknown, locale: Locale): string | undefined {
 
 function readLocalizedValue(value: unknown, locale: Locale): string | undefined {
   if (typeof value === 'string' && value.trim()) {
-    return value.trim();
+    const text = value.trim();
+    return locale === 'ko' || !containsHangul(text) ? text : undefined;
   }
 
   const record = parseRecord(value);
@@ -282,6 +283,10 @@ function parseRecord(value: unknown): Record<string, unknown> | undefined {
 
 function readString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function containsHangul(value: string): boolean {
+  return /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(value);
 }
 
 function normalizeRole(value: string | undefined): string | undefined {
