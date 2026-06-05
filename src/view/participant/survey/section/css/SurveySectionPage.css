@@ -29,6 +29,18 @@
   margin-top: var(--space-5);
 }
 
+.survey-section-page__dev-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin: var(--space-4) 0 0;
+}
+
+.survey-section-page__dev-tools .ui-button {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-small);
+}
+
 .survey-section-page__bottom {
   position: sticky;
   right: auto;

@@ -137,6 +137,7 @@ export function SurveyReviewPage() {
       {submitMutation.isError ? (
         <Message tone="error" title={copy.submitErrorTitle}>
           <p>{copy.submitErrorDescription}</p>
+          {import.meta.env.DEV ? <p>{readSubmitErrorDetail(submitMutation.error)}</p> : null}
         </Message>
       ) : null}
 
@@ -147,4 +148,16 @@ export function SurveyReviewPage() {
       </div>
     </main>
   );
+}
+
+function readSubmitErrorDetail(error: unknown): string {
+  if (error instanceof ParticipantApiError) {
+    return error.message;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Unknown submit error.';
 }
