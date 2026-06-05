@@ -36,8 +36,7 @@
   gap: var(--space-5);
 }
 
-.survey-entry-page__locale,
-.survey-intro-page__locale {
+.survey-entry-page__locale {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
@@ -46,8 +45,7 @@
   padding: var(--space-1);
 }
 
-.survey-entry-page__locale button,
-.survey-intro-page__locale button {
+.survey-entry-page__locale button {
   min-height: 44px;
   border-radius: var(--radius-md);
   background: transparent;
@@ -55,8 +53,7 @@
   font-weight: var(--font-weight-bold);
 }
 
-.survey-entry-page__locale button.is-selected,
-.survey-intro-page__locale button.is-selected {
+.survey-entry-page__locale button.is-selected {
   background: var(--color-surface);
   color: var(--color-brand-700);
   box-shadow: var(--shadow-soft);
