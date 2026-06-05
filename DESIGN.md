@@ -437,11 +437,14 @@ Branching is functional, but the visual behavior should feel simple.
 
 ### Profile
 
-Current implementation uses `Select` fields.
+Profile (basic info) questions render from the database, not from a fixed hard-coded form.
 
-- Prefer structured stable values for gender, semester, department, RC, dormitory, room type, and dorm experience.
-- Use configured options when a profile field question supplies them.
-- Avoid free text for profile unless a survey configuration explicitly requires it.
+- Render each profile question's own localized title (KO/EN) as the field label. Do not substitute a generic field name when the database supplies a title.
+- Use the question's configured options (localized labels) when present; only fall back to the canonical default option set for known fields (gender, semester, department, RC, dormitory, room type, dorm experience) that ship no options.
+- A profile field with no options (for example student number or name) renders as a single-line text input via `.profile-question__text`, matching the `Select` control contract (48px, `--radius-md`, focus ring).
+- Each profile question maps to one field. Store the answer under the canonical response column key when the field is known, otherwise under the raw `config.profileField` key so it is preserved in `profile_json`. Never drop a configured profile field or coerce it into an unrelated field.
+- Only split one question into several field selects when it is a legacy composite question that supplies no field identity and no options.
+- Prefer structured stable values; store the configured option `value`, not the localized label.
 
 ### Experience
 

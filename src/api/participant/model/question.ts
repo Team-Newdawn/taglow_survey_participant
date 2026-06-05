@@ -6,6 +6,7 @@ export type QuestionType =
   | 'scale'
   | 'single_choice'
   | 'multi_select'
+  | 'matrix_multi_select'
   | 'ranking'
   | 'text'
   | 'image_tag'

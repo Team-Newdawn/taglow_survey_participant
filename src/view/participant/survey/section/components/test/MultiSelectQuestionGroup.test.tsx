@@ -9,11 +9,17 @@ import { MultiSelectQuestionGroup } from '../MultiSelectQuestionGroup';
 const baseQuestion = publishedSurveyFixture.sections[1].questions[1];
 
 describe('MultiSelectQuestionGroup', () => {
-  it('renders grouped multi-select options as checkboxes', async () => {
+  it('renders grouped multi-select questions as a row and column matrix', async () => {
     const onChange = vi.fn();
     const questions = [
-      buildGroupedQuestion('time-1', 0, '05_00_07_00', '05:00~07:00'),
-      buildGroupedQuestion('time-2', 1, '07_00_09_00', '07:00~09:00'),
+      buildGroupedQuestion('time-1', 0, '세탁실', [
+        { value: 'morning', label: '아침' },
+        { value: 'evening', label: '저녁' },
+      ]),
+      buildGroupedQuestion('time-2', 1, '휴게실', [
+        { value: 'morning', label: '아침' },
+        { value: 'evening', label: '저녁' },
+      ]),
     ];
 
     render(
@@ -28,15 +34,46 @@ describe('MultiSelectQuestionGroup', () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole('checkbox', { name: '05:00~07:00' }));
+    expect(screen.getByRole('columnheader', { name: '아침' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '저녁' })).toBeInTheDocument();
+    expect(screen.getByRole('rowheader', { name: /세탁실/ })).toBeInTheDocument();
+    expect(screen.getByRole('rowheader', { name: /휴게실/ })).toBeInTheDocument();
 
-    expect(onChange).toHaveBeenCalledWith('time-1', { selectedOptions: ['05_00_07_00'] });
+    await userEvent.click(screen.getByRole('checkbox', { name: '세탁실, 아침' }));
+
+    expect(onChange).toHaveBeenCalledWith('time-1', { selectedOptions: ['morning'] });
+  });
+
+  it('uses configured row labels before bracket labels', () => {
+    const question = {
+      ...buildGroupedQuestion('time-1', 0, '브라켓 항목', [{ value: 'morning', label: '아침' }]),
+      config: {
+        displayGroup: '주로 사용하는 시간대를 선택해주세요.',
+        displayLabelKo: '설정된 행 이름',
+        options: [{ value: 'morning', label: { ko: '아침' } }],
+      },
+    };
+
+    render(
+      <MultiSelectQuestionGroup
+        groupTitle="주로 사용하는 시간대를 선택해주세요."
+        questions={[question]}
+        locale="ko"
+        fallbackLocale="ko"
+        values={{}}
+        missingQuestionIds={[]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('rowheader', { name: /설정된 행 이름/ })).toBeInTheDocument();
+    expect(screen.queryByRole('rowheader', { name: /브라켓 항목/ })).not.toBeInTheDocument();
   });
 
   it('localizes selected counts and validation copy in English', () => {
     const questions = [
-      buildGroupedQuestion('time-1', 0, '05_00_07_00', '05:00~07:00'),
-      buildGroupedQuestion('time-2', 1, '07_00_09_00', '07:00~09:00'),
+      buildGroupedQuestion('time-1', 0, '05:00~07:00', [{ value: 'weekday', label: 'Weekdays' }]),
+      buildGroupedQuestion('time-2', 1, '07:00~09:00', [{ value: 'weekday', label: 'Weekdays' }]),
     ];
 
     render(
@@ -57,17 +94,18 @@ describe('MultiSelectQuestionGroup', () => {
   });
 });
 
-function buildGroupedQuestion(id: string, orderIndex: number, value: string, label: string): PublicQuestion {
+function buildGroupedQuestion(id: string, orderIndex: number, rowLabel: string, options: Array<{ value: string; label: string }>): PublicQuestion {
   return {
     ...baseQuestion,
     id,
     questionKey: id,
     orderIndex,
     isRequired: true,
+    title: { ko: `주로 사용하는 시간대를 선택해주세요. [(${orderIndex + 1}) ${rowLabel}]` },
     config: {
       displayGroup: '주로 사용하는 시간대를 선택해주세요.',
       minSelect: 0,
-      options: [{ value, label: { ko: label } }],
+      options: options.map((option) => ({ value: option.value, label: { ko: option.label, en: option.label } })),
     },
     validation: {},
   };

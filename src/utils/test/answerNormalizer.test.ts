@@ -178,6 +178,44 @@ describe('buildSubmissionAnswers', () => {
     ]);
   });
 
+  it('preserves a database profile field that has no canonical response column', () => {
+    const profileSurvey = {
+      ...publishedSurveyFixture,
+      sections: [
+        {
+          ...publishedSurveyFixture.sections[0],
+          questions: [
+            {
+              ...publishedSurveyFixture.sections[0].questions[0],
+              id: 'question-student-number',
+              questionKey: 'dorm_25_2_q185',
+              title: { ko: '학번 (예. 22400001)' },
+              isRequired: true,
+              config: { profileField: 'student_number', inputType: 'text', options: [] },
+            },
+          ],
+        },
+      ],
+    };
+
+    const values = { 'question-student-number': '22400001' };
+
+    expect(extractRespondentProfile(profileSurvey, values)).toEqual(
+      expect.objectContaining({
+        extra: expect.objectContaining({ student_number: '22400001' }),
+      }),
+    );
+    expect(buildSubmissionAnswers(profileSurvey, values)).toEqual([
+      expect.objectContaining({
+        questionId: 'question-student-number',
+        answerType: 'profile',
+        valueJson: { student_number: '22400001' },
+      }),
+    ]);
+    expect(findMissingRequiredQuestions(profileSurvey.sections[0], values)).toEqual([]);
+    expect(findMissingRequiredQuestions(profileSurvey.sections[0], {})).toHaveLength(1);
+  });
+
   it('normalizes participant uploaded image tags into point answers with upload metadata', () => {
     const participantImageSurvey = {
       ...publishedSurveyFixture,
@@ -281,6 +319,40 @@ describe('buildSubmissionAnswers', () => {
         'time-2': { selectedOptions: ['07_00_09_00'] },
       }),
     ).toEqual([]);
+  });
+
+  it('normalizes matrix_multi_select answers with the multi-select value shape', () => {
+    const matrixQuestion = {
+      ...publishedSurveyFixture.sections[1].questions[1],
+      id: 'available-times',
+      questionKey: 'available_times',
+      questionType: 'matrix_multi_select' as const,
+      isRequired: true,
+      config: {
+        matrixRows: [{ value: '05_00_07_00', label: { ko: '05:00~07:00' } }],
+        matrixColumns: [{ value: 'mon', label: { ko: '월요일' } }],
+        options: [{ value: 'mon_05_00_07_00', label: { ko: '월요일 - 05:00~07:00' } }],
+      },
+      validation: {},
+    };
+    const section = {
+      ...publishedSurveyFixture.sections[1],
+      questions: [matrixQuestion],
+    };
+    const survey = { ...publishedSurveyFixture, sections: [section] };
+
+    expect(findMissingRequiredQuestions(section, {})).toEqual([matrixQuestion]);
+    expect(findMissingRequiredQuestions(section, { 'available-times': { selectedOptions: ['mon_05_00_07_00'] } })).toEqual([]);
+    expect(buildSubmissionAnswers(survey, { 'available-times': { selectedOptions: ['mon_05_00_07_00'] } })).toEqual([
+      expect.objectContaining({
+        questionId: 'available-times',
+        answerType: 'matrix_multi_select',
+        valueJson: {
+          selectedOptions: ['mon_05_00_07_00'],
+          otherText: null,
+        },
+      }),
+    ]);
   });
 
   it('requires every default profile field for a bundled required profile question', () => {

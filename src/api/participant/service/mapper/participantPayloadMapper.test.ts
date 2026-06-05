@@ -217,4 +217,63 @@ describe('ParticipantPayloadMapper', () => {
     ]);
     expect(payload.rawPayload).toEqual({ question1: 'quiet' });
   });
+
+  it('preserves database matrix option fields in option metadata', () => {
+    const survey = mapper.toPublicSurvey({
+      survey: {
+        id: 'survey-1',
+        title: '생활관 만족도 조사',
+        status: 'published',
+      },
+      sections: [
+        {
+          id: 'section-1',
+          survey_id: 'survey-1',
+          section_key: 'facility',
+          title_ko: '시설',
+          order_index: 1,
+          settings: {},
+        },
+      ],
+      questions: [
+        {
+          id: 'question-1',
+          survey_id: 'survey-1',
+          section_id: 'section-1',
+          question_key: 'available-times',
+          question_type: 'multi_select',
+          title_ko: '가능한 시간을 선택해주세요.',
+          order_index: 1,
+          is_required: true,
+          config: {
+            row_count: 2,
+            column_count: 2,
+            options: [
+              {
+                value: '09_mon',
+                label_ko: '09:00~11:00 - 월',
+                row_index: 0,
+                column_index: 0,
+                row_label_ko: '09:00~11:00',
+                column_label_ko: '월',
+              },
+            ],
+          },
+          validation: {},
+        },
+      ],
+      assets: [],
+    } satisfies RawPublicSurveyBundle);
+
+    expect(survey.sections[0]?.questions[0]?.config.options?.[0]).toMatchObject({
+      value: '09_mon',
+      label: { ko: '09:00~11:00 - 월' },
+      metadata: {
+        row_index: 0,
+        column_index: 0,
+        row_label_ko: '09:00~11:00',
+        column_label_ko: '월',
+      },
+    });
+  });
 });

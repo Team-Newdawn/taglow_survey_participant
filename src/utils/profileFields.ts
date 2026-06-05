@@ -35,6 +35,28 @@ export function resolveProfileFieldKey(question: ProfileQuestionDescriptor): Pro
   return normalizeProfileFieldKey(question.questionKey) ?? normalizeProfileFieldKey(question.title?.ko) ?? normalizeProfileFieldKey(question.title?.en);
 }
 
+/**
+ * Resolves a stable identifier for a profile question's field. Returns the canonical
+ * `ProfileFieldKey` when the field maps to a known response column, otherwise the raw
+ * configured `profileField` (e.g. `student_number`, `name`) so DB-defined profile
+ * questions are preserved instead of being dropped or treated as a composite question.
+ */
+export function resolveProfileFieldId(question: ProfileQuestionDescriptor): string | undefined {
+  const canonical = resolveProfileFieldKey(question);
+  if (canonical) {
+    return canonical;
+  }
+
+  for (const configKey of profileConfigKeys) {
+    const raw = question.config?.[configKey];
+    if (typeof raw === 'string' && raw.trim().length > 0) {
+      return normalizeProfileFieldString(raw);
+    }
+  }
+
+  return undefined;
+}
+
 export function normalizeProfileFieldKey(value: unknown): ProfileFieldKey | undefined {
   if (typeof value !== 'string') {
     return undefined;
