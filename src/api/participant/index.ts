@@ -9,6 +9,7 @@ export { useAssetUrlsQuery } from './query/useAssetUrlsQuery';
 export { useDuplicateSubmissionQuery } from './query/useDuplicateSubmissionQuery';
 export { useParticipantQuestionImageUploadMutation } from './query/useParticipantQuestionImageUploadMutation';
 export { useParticipantSessionQuery } from './query/useParticipantSessionQuery';
+export { usePublicSurveyLoginPageQuery } from './query/usePublicSurveyLoginPageQuery';
 export { usePublicSurveyQuery } from './query/usePublicSurveyQuery';
 export { useServiceFeedbackMutation } from './query/useServiceFeedbackMutation';
 export { useSubmissionMutation } from './query/useSubmissionMutation';

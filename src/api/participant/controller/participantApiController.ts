@@ -25,6 +25,7 @@ export interface ParticipantApiController {
   signOut(): Promise<void>;
 
   getPublicSurvey(publicSlug: string): Promise<PublicSurvey>;
+  getPublicSurveyLoginPage(publicSlug: string): Promise<PublicSurvey>;
   checkAccess(command: SurveyAccessCommand): Promise<SurveyAccessResult>;
   checkDuplicateSubmission(command: DuplicateSubmissionCommand): Promise<DuplicateSubmissionResult>;
 
