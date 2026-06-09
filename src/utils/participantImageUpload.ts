@@ -1,4 +1,3 @@
-export const PARTICIPANT_IMAGE_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
 export const PARTICIPANT_IMAGE_UPLOAD_TARGET_BYTES = 1 * 1024 * 1024;
 export const PARTICIPANT_IMAGE_UPLOAD_MAX_DIMENSION = 1600;
 export const PARTICIPANT_IMAGE_UPLOAD_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
