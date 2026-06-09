@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 
 import { useAssetUrlsQuery, useParticipantSessionQuery, usePublicSurveyQuery } from '../../../../api/participant';
@@ -31,6 +31,7 @@ export function SurveySectionPage() {
   const { publicSlug = '', sectionKey = '' } = useParams();
   const location = useLocation();
   const bodyRef = useRef<HTMLDivElement | null>(null);
+  const questionBlockRefs = useRef(new Map<string, HTMLDivElement>());
   const surveyQuery = usePublicSurveyQuery(publicSlug);
   const sessionQuery = useParticipantSessionQuery();
   const survey = surveyQuery.data;
@@ -90,6 +91,35 @@ export function SurveySectionPage() {
         currentQuestionScreen.some((visibleQuestion) => visibleQuestion.id === question.id),
       )
     : [];
+
+  const registerBlockRef = useCallback(
+    (blockId: string) => (element: HTMLDivElement | null) => {
+      if (element) {
+        questionBlockRefs.current.set(blockId, element);
+      } else {
+        questionBlockRefs.current.delete(blockId);
+      }
+    },
+    [],
+  );
+
+  const scrollToFirstMissingQuestion = useCallback(
+    (missingQuestionIds: string[]) => {
+      const missingIds = new Set(missingQuestionIds);
+      const topMostBlock = currentRenderBlocks.find((block) =>
+        getRenderBlockQuestionIds(block).some((questionId) => missingIds.has(questionId)),
+      );
+
+      if (!topMostBlock) {
+        return;
+      }
+
+      const element = questionBlockRefs.current.get(getQuestionRenderBlockId(topMostBlock));
+      scrollQuestionBlockIntoView(element);
+    },
+    [currentRenderBlocks],
+  );
+
   const { sectionIndex, nextSection, hasNextQuestionScreen, goNext, goPrevious } = useSectionNavigation({
     publicSlug,
     section,
@@ -99,6 +129,7 @@ export function SurveySectionPage() {
     setQuestionScreenIndex,
     missingQuestions,
     setMissingQuestionIds,
+    scrollToFirstMissingQuestion,
     markSectionCompleted,
     saveDraft,
   });
@@ -173,12 +204,14 @@ export function SurveySectionPage() {
 
         <form className="survey-section-page__questions">
           {currentRenderBlocks.map((block) => {
+            const blockId = getQuestionRenderBlockId(block);
+            let content;
+
             if (block.type === 'scale_group') {
               const isFirstRenderBlock = currentRenderBlocks[0] === block;
 
-              return (
+              content = (
                 <ScaleQuestionGroup
-                  key={block.id}
                   groupTitle={readGroupTitle(block, displayLocale)}
                   questions={block.questions}
                   locale={displayLocale}
@@ -192,12 +225,9 @@ export function SurveySectionPage() {
                   }}
                 />
               );
-            }
-
-            if (block.type === 'multi_select_group') {
-              return (
+            } else if (block.type === 'multi_select_group') {
+              content = (
                 <MultiSelectQuestionGroup
-                  key={block.id}
                   groupTitle={readGroupTitle(block, displayLocale)}
                   questions={block.questions}
                   locale={displayLocale}
@@ -210,14 +240,11 @@ export function SurveySectionPage() {
                   }}
                 />
               );
-            }
-
-            if (block.type === 'profile_field') {
+            } else if (block.type === 'profile_field') {
               const value = form.watch(block.question.id);
 
-              return (
+              content = (
                 <ProfileQuestion
-                  key={block.id}
                   question={block.question}
                   assets={survey.assets}
                   locale={displayLocale}
@@ -233,23 +260,28 @@ export function SurveySectionPage() {
                   }}
                 />
               );
+            } else {
+              content = (
+                <QuestionRenderer
+                  question={block.question}
+                  assets={survey.assets}
+                  assetUrls={currentScreenAssetUrlsQuery.data ?? {}}
+                  locale={displayLocale}
+                  fallbackLocale={defaultLocale}
+                  value={form.watch(block.question.id)}
+                  error={missingQuestionIds.includes(block.question.id) ? copy.requiredQuestion : undefined}
+                  number={renderBlockNumberById.get(block.question.id)}
+                  onChange={(value) => {
+                    form.setValue(block.question.id, value, { shouldDirty: true, shouldTouch: true });
+                  }}
+                />
+              );
             }
 
             return (
-              <QuestionRenderer
-                key={block.question.id}
-                question={block.question}
-                assets={survey.assets}
-                assetUrls={currentScreenAssetUrlsQuery.data ?? {}}
-                locale={displayLocale}
-                fallbackLocale={defaultLocale}
-                value={form.watch(block.question.id)}
-                error={missingQuestionIds.includes(block.question.id) ? copy.requiredQuestion : undefined}
-                number={renderBlockNumberById.get(block.question.id)}
-                onChange={(value) => {
-                  form.setValue(block.question.id, value, { shouldDirty: true, shouldTouch: true });
-                }}
-              />
+              <div key={blockId} ref={registerBlockRef(blockId)} className="survey-section-page__question-block">
+                {content}
+              </div>
             );
           })}
         </form>
@@ -290,6 +322,41 @@ function readGroupTitle(
   locale: 'ko' | 'en',
 ): string {
   return locale === 'en' && block.groupTitleEn ? block.groupTitleEn : block.groupTitle;
+}
+
+function getRenderBlockQuestionIds(block: ReturnType<typeof buildQuestionRenderBlocks>[number]): string[] {
+  if (block.type === 'scale_group' || block.type === 'multi_select_group') {
+    return block.questions.map((question) => question.id);
+  }
+
+  return [block.question.id];
+}
+
+function scrollQuestionBlockIntoView(element: HTMLDivElement | undefined): void {
+  if (!element || typeof window === 'undefined') {
+    return;
+  }
+
+  // Defer to the next frame so the validation message and group expansion are
+  // laid out before we measure, otherwise the target lands slightly too high.
+  const run = () => {
+    const header = document.querySelector<HTMLElement>('.survey-section-page > .ui-step-header');
+    const headerHeight = header?.getBoundingClientRect().height ?? 0;
+    const top = element.getBoundingClientRect().top + window.scrollY - headerHeight - 12;
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
+    try {
+      window.scrollTo({ top: Math.max(0, top), behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+    } catch {
+      window.scrollTo(0, Math.max(0, top));
+    }
+  };
+
+  if (typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(run);
+  } else {
+    run();
+  }
 }
 
 function scrollElementToTop(element: HTMLElement | null): void {

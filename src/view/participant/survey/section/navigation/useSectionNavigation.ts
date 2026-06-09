@@ -12,6 +12,7 @@ type UseSectionNavigationArgs = {
   setQuestionScreenIndex: (index: number) => void;
   missingQuestions: PublicQuestion[];
   setMissingQuestionIds: (questionIds: string[]) => void;
+  scrollToFirstMissingQuestion: (questionIds: string[]) => void;
   markSectionCompleted: (sectionId: string) => void;
   saveDraft: () => Promise<void>;
 };
@@ -26,6 +27,7 @@ export function useSectionNavigation(args: UseSectionNavigationArgs) {
     setQuestionScreenIndex,
     missingQuestions,
     setMissingQuestionIds,
+    scrollToFirstMissingQuestion,
     markSectionCompleted,
     saveDraft,
   } = args;
@@ -42,7 +44,9 @@ export function useSectionNavigation(args: UseSectionNavigationArgs) {
     }
 
     if (missingQuestions.length > 0) {
-      setMissingQuestionIds(missingQuestions.map((question) => question.id));
+      const missingQuestionIds = missingQuestions.map((question) => question.id);
+      setMissingQuestionIds(missingQuestionIds);
+      scrollToFirstMissingQuestion(missingQuestionIds);
       return;
     }
 
@@ -68,6 +72,7 @@ export function useSectionNavigation(args: UseSectionNavigationArgs) {
     nextSection,
     publicSlug,
     saveDraft,
+    scrollToFirstMissingQuestion,
     section,
     setMissingQuestionIds,
     setQuestionScreenIndex,
