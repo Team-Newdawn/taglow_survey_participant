@@ -174,6 +174,7 @@ export function ImageTagQuestion(props: QuestionComponentProps<unknown>) {
           >
             <span aria-hidden="true" />
           </button>
+          <span className="image-tag-question__drag-hint">{copy.dragNewPinHint}</span>
         </div>
 
         {shouldShowStickerHint ? <span className="image-tag-question__sticker-hint" style={hintStyle} aria-hidden="true" /> : null}

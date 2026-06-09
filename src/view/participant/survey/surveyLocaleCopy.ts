@@ -41,6 +41,7 @@ export type SurveyLocaleCopy = {
   editLocationLabel: (index: number) => string;
   imagePreparing: string;
   dragNewPinLabel: string;
+  dragNewPinHint: string;
   imageTagDialogNewTitle: string;
   imageTagDialogEditTitle: (index: number) => string;
   imageTagTextRequiredError: string;
@@ -53,9 +54,6 @@ export type SurveyLocaleCopy = {
   delete: string;
   cancel: string;
   save: string;
-  uploadImage: string;
-  reuploadImage: string;
-  participantImageInstruction: string;
   uploadImageLabel: string;
   uploadError: string;
   uploadedImageLoadError: string;
@@ -64,7 +62,6 @@ export type SurveyLocaleCopy = {
   participantImageEmpty: string;
   imageOnlyError: string;
   unsupportedImageType: string;
-  maxImageSizeError: (maxFileSizeMb: number) => string;
   introEyebrow: string;
   language: string;
   sectionsToComplete: string;
@@ -147,6 +144,7 @@ const koCopy: SurveyLocaleCopy = {
   editLocationLabel: (index) => `${index}번 위치 수정`,
   imagePreparing: '이미지를 준비하고 있습니다.',
   dragNewPinLabel: '새 위치 스티커를 이미지로 드래그',
+  dragNewPinHint: '↑ 한동 로고를 드래그해주세요',
   imageTagDialogNewTitle: '위치 내용 입력',
   imageTagDialogEditTitle: (index) => `${index}번 위치 수정`,
   imageTagTextRequiredError: '이유를 짧게 적어주세요.',
@@ -159,18 +157,14 @@ const koCopy: SurveyLocaleCopy = {
   delete: '삭제',
   cancel: '취소',
   save: '저장',
-  uploadImage: '사진 업로드',
-  reuploadImage: '사진 다시 업로드',
-  participantImageInstruction: '사진을 올린 뒤, 건의할 위치를 선택해주세요.',
   uploadImageLabel: '사진 업로드',
   uploadError: '사진을 업로드하지 못했습니다. 다시 시도해주세요.',
   uploadedImageLoadError: '업로드한 사진을 불러오지 못했습니다.',
   participantImageAlt: '참여자가 올린 위치 선택 사진',
   participantImagePreparing: '사진을 준비하고 있습니다.',
-  participantImageEmpty: '사진을 올리면 위치를 선택할 수 있습니다.',
+  participantImageEmpty: '클릭하여 이미지를 업로드하세요.',
   imageOnlyError: '이미지 파일만 업로드할 수 있습니다.',
   unsupportedImageType: '허용된 이미지 형식이 아닙니다.',
-  maxImageSizeError: (maxFileSizeMb) => `${maxFileSizeMb}MB 이하의 이미지만 업로드할 수 있습니다.`,
   introEyebrow: '설문 안내',
   language: '언어',
   sectionsToComplete: '진행할 섹션',
@@ -249,6 +243,7 @@ const enCopy: SurveyLocaleCopy = {
   editLocationLabel: (index) => `Edit location ${index}`,
   imagePreparing: 'Preparing the image.',
   dragNewPinLabel: 'Drag a new location marker onto the image',
+  dragNewPinHint: '↑ Drag the Handong logo',
   imageTagDialogNewTitle: 'Add location details',
   imageTagDialogEditTitle: (index) => `Edit location ${index}`,
   imageTagTextRequiredError: 'Please briefly describe the reason.',
@@ -261,18 +256,14 @@ const enCopy: SurveyLocaleCopy = {
   delete: 'Delete',
   cancel: 'Cancel',
   save: 'Save',
-  uploadImage: 'Upload photo',
-  reuploadImage: 'Upload another photo',
-  participantImageInstruction: 'Upload a photo, then select the location you want to mention.',
   uploadImageLabel: 'Upload photo',
   uploadError: 'Could not upload the photo. Please try again.',
   uploadedImageLoadError: 'Could not load the uploaded photo.',
   participantImageAlt: 'Participant-uploaded photo for choosing a location',
   participantImagePreparing: 'Preparing the photo.',
-  participantImageEmpty: 'Upload a photo to select a location.',
+  participantImageEmpty: 'Click to upload an image.',
   imageOnlyError: 'Only image files can be uploaded.',
   unsupportedImageType: 'This image format is not supported.',
-  maxImageSizeError: (maxFileSizeMb) => `Please upload an image under ${maxFileSizeMb}MB.`,
   introEyebrow: 'Survey guide',
   language: 'Language',
   sectionsToComplete: 'Sections to complete',

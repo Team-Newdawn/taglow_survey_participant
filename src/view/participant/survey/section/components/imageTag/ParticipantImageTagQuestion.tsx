@@ -7,7 +7,6 @@ import { calculateImageRatio } from '../../../../../../utils/imageRatio';
 import {
   isAllowedParticipantImageMimeType,
   mimeTypeMatches,
-  PARTICIPANT_IMAGE_UPLOAD_MAX_BYTES,
   PARTICIPANT_IMAGE_UPLOAD_MIME_TYPES,
   prepareParticipantImageUploadFile,
 } from '../../../../../../utils/participantImageUpload';
@@ -33,6 +32,7 @@ type DragPreview = {
 export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknown>) {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const dragDotRef = useRef<HTMLButtonElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [editor, setEditor] = useState<ParticipantImageTagEditor | null>(null);
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
@@ -45,7 +45,6 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
   const tagTypes = getImageTagOptions(props.question, props.locale, props.fallbackLocale);
   const acceptedMimeTypes = getAcceptedMimeTypes(props.question.config.acceptedMimeTypes);
   const accept = acceptedMimeTypes.join(',');
-  const maxFileSizeBytes = readMaxFileSizeBytes(props.question.config.maxFileSizeMb);
   const isTagTextRequired = props.question.validation.requiredTagText === true || props.question.config.requireText === true;
   const uploadedAsset = toUploadedAsset(value, props.question.surveyId);
   const uploadedUrlQuery = useAssetUrlQuery(uploadedAsset);
@@ -61,6 +60,14 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
   const editorIndex = editor?.index;
   const deleteEditorPoint = typeof editorIndex === 'number' ? () => deletePoint(editorIndex) : undefined;
 
+  const openFilePicker = () => {
+    if (uploadMutation.isPending || isPreparingUpload) {
+      return;
+    }
+
+    fileInputRef.current?.click();
+  };
+
   const deletePoint = (index: number) => {
     props.onChange({
       ...value,
@@ -70,7 +77,7 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
   };
 
   const uploadFile = async (file: File) => {
-    const validationError = validateFile(file, acceptedMimeTypes, maxFileSizeBytes, props.locale);
+    const validationError = validateFile(file, acceptedMimeTypes, props.locale);
     setFileError(validationError);
 
     if (validationError) {
@@ -178,33 +185,41 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
   return (
     <QuestionShell question={props.question} locale={props.locale} fallbackLocale={props.fallbackLocale} error={props.error} number={props.number}>
       <div ref={rootRef} className={rootClassName}>
-        <div className="participant-image-tag-question__upload">
-          <label className="participant-image-tag-question__upload-button">
-            <span>{value.image ? copy.reuploadImage : copy.uploadImage}</span>
-            <input
-              aria-label={copy.uploadImageLabel}
-              type="file"
-              accept={accept}
-              disabled={uploadMutation.isPending || isPreparingUpload}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                event.target.value = '';
+        <input
+          ref={fileInputRef}
+          className="participant-image-tag-question__file-input"
+          aria-label={copy.uploadImageLabel}
+          tabIndex={-1}
+          type="file"
+          accept={accept}
+          disabled={uploadMutation.isPending || isPreparingUpload}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = '';
 
-                if (file) {
-                  void uploadFile(file);
-                }
-              }}
-            />
-          </label>
-        </div>
+            if (file) {
+              void uploadFile(file);
+            }
+          }}
+        />
 
-        <p>{copy.participantImageInstruction}</p>
         {isPreparingUpload ? <p>{copy.participantImagePreparing}</p> : null}
         {fileError ? <p className="image-tag-question__error">{fileError}</p> : null}
         {uploadMutation.isError ? <p className="image-tag-question__error">{copy.uploadError}</p> : null}
         {uploadedUrlQuery.isError ? <p className="image-tag-question__error">{copy.uploadedImageLoadError}</p> : null}
 
-        <div className={canvasClassName}>
+        <div
+          className={canvasClassName}
+          role="button"
+          tabIndex={0}
+          onClick={openFilePicker}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              openFilePicker();
+            }
+          }}
+        >
           {imageUrl ? (
             <div className="image-tag-question__image-stage">
               <img ref={imageRef} src={imageUrl} alt={copy.participantImageAlt} draggable={false} />
@@ -215,7 +230,10 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
                   className="image-tag-question__pin"
                   style={{ left: `${point.xRatio * 100}%`, top: `${point.yRatio * 100}%` }}
                   aria-label={copy.editLocationLabel(index + 1)}
-                  onClick={() => setEditor({ index, point })}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setEditor({ index, point });
+                  }}
                 >
                   {index + 1}
                 </button>
@@ -242,6 +260,7 @@ export function ParticipantImageTagQuestion(props: QuestionComponentProps<unknow
           >
             <span aria-hidden="true" />
           </button>
+          <span className="image-tag-question__drag-hint">{copy.dragNewPinHint}</span>
         </div>
 
         {shouldShowStickerHint ? <span className="image-tag-question__sticker-hint" style={hintStyle} aria-hidden="true" /> : null}
@@ -292,7 +311,7 @@ function toUploadedAsset(value: ParticipantImageTagValue, surveyId: string): Sur
   };
 }
 
-function validateFile(file: File, acceptedMimeTypes: string[], maxFileSizeBytes: number, locale: 'ko' | 'en'): string | null {
+function validateFile(file: File, acceptedMimeTypes: string[], locale: 'ko' | 'en'): string | null {
   const copy = getSurveyLocaleCopy(locale);
 
   if (!file.type.startsWith('image/')) {
@@ -301,10 +320,6 @@ function validateFile(file: File, acceptedMimeTypes: string[], maxFileSizeBytes:
 
   if (!isAllowedParticipantImageMimeType(file.type) || !acceptedMimeTypes.some((mimeType) => mimeTypeMatches(mimeType.trim(), file.type))) {
     return copy.unsupportedImageType;
-  }
-
-  if (file.size > maxFileSizeBytes) {
-    return copy.maxImageSizeError(maxFileSizeBytes / 1024 / 1024);
   }
 
   return null;
@@ -321,15 +336,6 @@ function getAcceptedMimeTypes(value: unknown): string[] {
   );
 
   return supportedMimeTypes.length > 0 ? supportedMimeTypes : [...PARTICIPANT_IMAGE_UPLOAD_MIME_TYPES];
-}
-
-function readMaxFileSizeBytes(value: unknown): number {
-  const configuredMaxFileSizeMb = readNumber(value);
-  if (!configuredMaxFileSizeMb) {
-    return PARTICIPANT_IMAGE_UPLOAD_MAX_BYTES;
-  }
-
-  return Math.min(configuredMaxFileSizeMb * 1024 * 1024, PARTICIPANT_IMAGE_UPLOAD_MAX_BYTES);
 }
 
 function readStringArray(value: unknown): string[] {

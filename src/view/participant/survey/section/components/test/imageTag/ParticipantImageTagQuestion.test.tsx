@@ -73,19 +73,25 @@ describe('ParticipantImageTagQuestion', () => {
     expect(container.querySelector('.image-tag-question__sticker-hint')).not.toBeInTheDocument();
   });
 
-  it('blocks participant image uploads over the storage bucket limit before upload', async () => {
+  it('accepts large images and relies on client-side compression instead of a size limit', async () => {
     const user = userEvent.setup();
-    const uploadQuestionImage = vi.fn();
+    const uploadQuestionImage = vi.fn(async () => ({
+      storageBucket: 'survey-assets',
+      storagePath: 'participant-uploads/upload-1.png',
+      signedUrl: 'https://example.com/uploaded.png',
+      metadata: { originalName: 'large.png' },
+    }));
 
     renderWithProviders(<Harness question={question} />, {
       controller: createFakeParticipantApiController({ uploadQuestionImage }),
     });
 
-    const oversizedFile = new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'large.png', { type: 'image/png' });
-    await user.upload(screen.getByLabelText('사진 업로드'), oversizedFile);
+    const largeFile = new File([new Uint8Array(20 * 1024 * 1024)], 'large.png', { type: 'image/png' });
+    await user.upload(screen.getByLabelText('사진 업로드'), largeFile);
 
-    expect(await screen.findByText('5MB 이하의 이미지만 업로드할 수 있습니다.')).toBeInTheDocument();
-    expect(uploadQuestionImage).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(uploadQuestionImage).toHaveBeenCalledWith({ surveyId: 'survey-1', questionId: 'question-upload-tag', file: largeFile });
+    });
   });
 
   it('uploads the prepared image file after client-side compression', async () => {
