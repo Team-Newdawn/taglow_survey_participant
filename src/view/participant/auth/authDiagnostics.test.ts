@@ -1,13 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   buildAuthDiagnosticsReport,
   describeAuthDiagnostics,
+  escapeEmbeddedContext,
   hasReportableProblem,
   isEmbeddedContext,
   probeBrowserStorage,
   readOAuthError,
 } from './authDiagnostics';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 function makeWindow(overrides: {
   href?: string;
@@ -129,6 +134,45 @@ describe('isEmbeddedContext', () => {
     };
 
     expect(isEmbeddedContext(framed)).toBe(true);
+  });
+});
+
+describe('escapeEmbeddedContext', () => {
+  it('returns not-embedded in a top-level window', () => {
+    expect(escapeEmbeddedContext()).toBe('not-embedded');
+  });
+
+  it('navigates the top window to the current survey URL when embedded', () => {
+    const top = { location: { href: 'https://portal.example.edu/frame' } };
+    const win = {
+      location: { href: 'https://survey.example.com/survey/abc/intro' },
+      self: null as unknown,
+      top,
+    };
+    win.self = win;
+    vi.stubGlobal('window', win);
+
+    expect(escapeEmbeddedContext()).toBe('escaped');
+    expect(top.location.href).toBe('https://survey.example.com/survey/abc/intro');
+  });
+
+  it('returns blocked when the embedding frame forbids top navigation', () => {
+    const top = {
+      location: {
+        set href(_href: string) {
+          throw new Error('top navigation blocked');
+        },
+      },
+    };
+    const win = {
+      location: { href: 'https://survey.example.com/survey/abc/intro' },
+      self: null as unknown,
+      top,
+    };
+    win.self = win;
+    vi.stubGlobal('window', win);
+
+    expect(escapeEmbeddedContext()).toBe('blocked');
   });
 });
 
