@@ -3,3 +3,4 @@
 !dist/**
 !Dockerfile
 !nginx.conf
+!security-headers.conf
