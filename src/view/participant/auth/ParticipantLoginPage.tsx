@@ -15,6 +15,14 @@ import { Button } from '../../../components/Button';
 import { Message } from '../../../components/Message';
 import { resolveSystemLocale } from '../../../utils/systemLocale';
 import {
+  type AuthDiagnosticsMessage,
+  buildAuthDiagnosticsReport,
+  clearAuthDiagnostics,
+  describeAuthDiagnostics,
+  hasReportableProblem,
+  readLastAuthDiagnostics,
+} from './authDiagnostics';
+import {
   buildAndroidBrowserIntentUrl,
   createGoogleOAuthHandoffUrl,
   hasGoogleOAuthHandoffParam,
@@ -33,6 +41,7 @@ export function ParticipantLoginPage() {
   const surveyQuery = usePublicSurveyLoginPageQuery(publicSlug);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [diagnostics, setDiagnostics] = useState<AuthDiagnosticsMessage | null>(null);
   const locale = useMemo(() => resolveSystemLocale(window.navigator), []);
   const loginContent = useMemo(() => getLoginPageContent(surveyQuery.data, locale), [surveyQuery.data, locale]);
   const isInAppBrowser = useMemo(() => isLikelyInAppBrowser(window.navigator.userAgent), []);
@@ -70,6 +79,8 @@ export function ParticipantLoginPage() {
   const startGoogleSignIn = useCallback(async () => {
     setIsSigningIn(true);
     setError(null);
+    setDiagnostics(null);
+    clearAuthDiagnostics();
 
     try {
       const redirectTo = new URL(`/survey/${publicSlug}/intro`, window.location.origin).toString();
@@ -83,6 +94,14 @@ export function ParticipantLoginPage() {
       setIsSigningIn(false);
     }
   }, [controller, locale, publicSlug, sessionQuery.data]);
+
+  useEffect(() => {
+    // Surface a captured sign-in failure (from the redirect bounce) or a live
+    // storage/cookie block so the participant sees why instead of a silent loop.
+    const stashed = readLastAuthDiagnostics();
+    const report = stashed ?? buildAuthDiagnosticsReport(window, new Date().toISOString());
+    setDiagnostics(hasReportableProblem(report) ? describeAuthDiagnostics(report, locale) : null);
+  }, [locale]);
 
   useEffect(() => {
     if (!shouldAutoStartGoogleOAuth || isInAppBrowser || sessionQuery.isPending || isSigningIn) {
@@ -130,12 +149,28 @@ export function ParticipantLoginPage() {
           <Message tone="error" title={locale === 'ko' ? '로그인이 필요합니다.' : 'Sign-in is required.'}>
             <p>{error}</p>
           </Message>
+        ) : diagnostics ? (
+          <Message tone="error" title={diagnostics.title}>
+            <p>{diagnostics.body}</p>
+            {diagnostics.code ? <p className="participant-login-page__error-code">{diagnostics.code}</p> : null}
+          </Message>
         ) : null}
 
         <img src={bottomImageSrc} alt={loginContent.bottomImage?.alt || 'Newdawn Domunion'} className="participant-login-page__partner-logo" />
-        <Button fullWidth disabled={isSigningIn || sessionQuery.isPending} onClick={signIn}>
-          {isSigningIn ? (locale === 'ko' ? '로그인 이동 중' : 'Opening sign-in') : locale === 'ko' ? 'Google로 계속하기' : 'Continue with Google'}
-        </Button>
+        {diagnostics?.code === 'embedded' ? (
+          <a
+            className="participant-login-page__open-external"
+            href={window.location.href}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {locale === 'ko' ? '새 창에서 설문 열기' : 'Open survey in a new window'}
+          </a>
+        ) : (
+          <Button fullWidth disabled={isSigningIn || sessionQuery.isPending} onClick={signIn}>
+            {isSigningIn ? (locale === 'ko' ? '로그인 이동 중' : 'Opening sign-in') : locale === 'ko' ? 'Google로 계속하기' : 'Continue with Google'}
+          </Button>
+        )}
       </footer>
     </main>
   );

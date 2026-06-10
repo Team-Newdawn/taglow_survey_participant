@@ -66,3 +66,34 @@
   display: grid;
   gap: var(--space-3);
 }
+
+.participant-login-page__error-code {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-caption);
+  font-weight: 500;
+  color: var(--color-text-subtle);
+}
+
+.participant-login-page__open-external {
+  display: inline-flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-5);
+  background: var(--color-brand-600);
+  color: var(--color-bg);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-body);
+  transition: background var(--motion-fast) var(--ease-standard);
+}
+
+.participant-login-page__open-external:hover {
+  background: var(--color-brand-700);
+}
+
+.participant-login-page__open-external:active {
+  transform: translateY(1px);
+}
