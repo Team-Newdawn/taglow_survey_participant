@@ -3,6 +3,7 @@ node_modules/
 dist/
 build/
 coverage/
+supabase/.temp/
 .env
 .env.local
 .env.*.local
